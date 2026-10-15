@@ -25,11 +25,14 @@ Demandas, clientes, colaboradores, BUs, regionais e times ativos; distribuição
 
 ### O que a planilha não permite (e a dashboard não inventa)
 - **Projetos exatos**: falta a coluna `PROJETO`. A contagem atual é marcada como estimativa.
-- **Entregas no prazo e tempo de execução**: falta a data de conclusão. `ENTREGA` é tratada como prazo planejado.
+- **Entregas no prazo e tempo de execução**: a pauta não registra data de conclusão (decisão do time). `ENTREGA` é tratada como prazo planejado.
 - **Capacidade individual**: não há horas ou esforço; a carga por pessoa mostra concentração, não sobrecarga.
 - **Comparação com períodos anteriores**: não há histórico de snapshots; a comparação usa as datas de INÍCIO (entradas nos últimos 30 dias contra os 30 anteriores).
 
-Para destravar as três primeiras, basta criar as colunas `PROJETO` e `CONCLUSÃO` nas guias. A dashboard reconhece e passa a usá-las automaticamente.
+Para tornar a contagem de projetos exata, basta criar a coluna `PROJETO` nas guias. A dashboard reconhece e passa a usá-la automaticamente.
+
+### Qualidade dos dados
+Toda divergência aponta a guia (por extenso) e a linha da planilha, no formato `(guia São Paulo · Content House, linha 26)`. Alertas já verificados pelo time podem ser silenciados em `lib/quality-rules.ts` (ex.: demandas homônimas confirmadas como diferentes).
 
 ### Conferência
 Os números são conferidos a cada sincronização contra o quadro **Por time** da guia Visão Geral (Tarefas, Ativas, Atrasadas, Em 7 dias). O resultado aparece em **Qualidade dos dados**. No snapshot de 14/10/2026, todos os valores batem: 94 tarefas, 23 ativas, 6 atrasadas, 3 em 7 dias.

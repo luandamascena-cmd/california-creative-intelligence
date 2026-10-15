@@ -11,6 +11,14 @@ import type {
 } from "./types";
 import { addDaysISO, clean, normKey, parseDate, splitPeople, todayISO } from "./text";
 import { tabLabel } from "./labels";
+import { CONFIRMED_DISTINCT } from "./quality-rules";
+
+/** Localização padrão de toda divergência: guia (por extenso) e linha da planilha. */
+function where(tab: string, rows: number[]): string {
+  const sorted = [...new Set(rows)].sort((a, b) => a - b);
+  const list = sorted.length === 1 ? `linha ${sorted[0]}` : `linhas ${sorted.slice(0, -1).join(", ")} e ${sorted[sorted.length - 1]}`;
+  return `(guia ${tabLabel(tab)}, ${list})`;
+}
 
 export interface RawSheet {
   title: string;
@@ -177,7 +185,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
     const hit = dict.get(normKey(v));
     if (hit) return hit;
     if (hasLists && dict.size) {
-      const k = `${field}::${normKey(v)}`;
+      const k = `${field}::${normKey(v)}::${tab}`;
       const entry = offList.get(k) ?? { field, value: v, rows: [], tab };
       entry.rows.push(row);
       offList.set(k, entry);
@@ -187,7 +195,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
 
   // Uniformiza grafias livres (fora das listas) para a forma mais frequente.
   const freeForms = new Map<string, Map<string, number>>();
-  const seenExact = new Map<string, string>();
+  const seenExact = new Map<string, { tab: string; row: number }>();
   const seenNear = new Map<string, { tab: string; row: number }>();
 
   let capStatus = false,
@@ -222,7 +230,8 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         severity: "alerta",
         code: "colunas-ausentes",
         tab: sheet.title,
-        message: `Colunas não encontradas em "${tabLabel(sheet.title)}": ${missing.join(", ")}.`,
+        rows: [header.row + 1],
+        message: `Colunas não encontradas no cabeçalho: ${missing.join(", ")} ${where(sheet.title, [header.row + 1])}.`,
       });
     }
     capStatus ||= col.status !== undefined;
@@ -248,7 +257,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "sem-tarefa",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `Linha ${rowNumber} de "${tabLabel(sheet.title)}" tem dados mas está sem TAREFA.`,
+          message: `Há dados preenchidos, mas a coluna TAREFA está vazia ${where(sheet.title, [rowNumber])}.`,
         });
         task = "(sem título)";
       }
@@ -275,7 +284,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "data-invalida",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `Data não reconhecida na linha ${rowNumber} de "${tabLabel(sheet.title)}" ("${task}").`,
+          message: `"${task}" tem data de INÍCIO ou ENTREGA em formato não reconhecido ${where(sheet.title, [rowNumber])}.`,
         });
       }
       if (startP.iso && dueP.iso && dueP.iso < startP.iso) {
@@ -284,7 +293,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "entrega-antes-inicio",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `"${task}" tem ENTREGA anterior ao INÍCIO (linha ${rowNumber}).`,
+          message: `"${task}" tem ENTREGA anterior ao INÍCIO ${where(sheet.title, [rowNumber])}.`,
         });
       }
 
@@ -295,7 +304,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "sem-status",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `"${task}" está sem STATUS (linha ${rowNumber}).`,
+          message: `"${task}" está sem STATUS ${where(sheet.title, [rowNumber])}.`,
         });
       }
 
@@ -347,24 +356,25 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "duplicata-exata",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `"${task}" (linha ${rowNumber}) é idêntica a ${prev} e foi contada uma única vez.`,
+          message: `"${task}" é idêntica a outra linha da pauta e foi contada uma única vez ${where(sheet.title, [prev.row, rowNumber])}.`,
         });
         continue;
       }
-      seenExact.set(exactSig, `${tabLabel(sheet.title)}, linha ${rowNumber}`);
+      seenExact.set(exactSig, { tab: sheet.title, row: rowNumber });
 
       // Possíveis duplicatas: mesma tarefa, cliente e datas, com algum campo diferente.
       const nearSig = [normKey(d.task), normKey(d.client), d.start, d.due].join("|");
       const near = seenNear.get(nearSig);
-      if (near) {
+      const confirmed = CONFIRMED_DISTINCT.some((c) => normKey(c.tab) === normKey(sheet.title) && normKey(c.task) === normKey(task));
+      if (near && !confirmed) {
         issues.push({
           severity: "alerta",
           code: "possivel-duplicata",
           tab: sheet.title,
           rows: [near.row, rowNumber],
-          message: `"${task}" aparece nas linhas ${near.row} e ${rowNumber} com mesmas datas e campos diferentes. Mantidas as duas; confirme se é a mesma demanda.`,
+          message: `"${task}" aparece duas vezes com as mesmas datas e campos diferentes. Mantidas as duas; confirme se é a mesma demanda ${near.tab === sheet.title ? where(sheet.title, [near.row, rowNumber]) : `${where(near.tab, [near.row])} e ${where(sheet.title, [rowNumber])}`}.`,
         });
-      } else {
+      } else if (!near) {
         seenNear.set(nearSig, { tab: sheet.title, row: rowNumber });
       }
 
@@ -408,45 +418,29 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
       code: "fora-da-lista",
       tab: e.tab,
       rows: e.rows,
-      message: `${e.field} "${e.value}" não consta na guia Listas (${e.rows.length} ${e.rows.length === 1 ? "registro" : "registros"}).`,
+      message: `${e.field} "${e.value}" não consta na guia Listas ${where(e.tab, e.rows)}.`,
     });
   });
 
-  const openNoDue = demands.filter((d) => d.isOpen && !d.due && d.statusCategory !== "travado" && d.statusCategory !== "briefing");
-  if (openNoDue.length) {
-    issues.push({
-      severity: "alerta",
-      code: "aberta-sem-prazo",
-      message: `${openNoDue.length} ${openNoDue.length === 1 ? "demanda aberta e em produção está" : "demandas abertas e em produção estão"} sem data de ENTREGA.`,
-      rows: openNoDue.map((d) => d.row),
-    });
-  }
-  const finishedNoDates = demands.filter((d) => !d.isOpen && (!d.start || !d.due));
-  if (finishedNoDates.length) {
-    issues.push({
-      severity: "info",
-      code: "finalizada-sem-data",
-      message: `${finishedNoDates.length} demandas finalizadas sem INÍCIO ou ENTREGA ficam fora da linha do tempo.`,
-    });
-  }
-  const noPeople = demands.filter((d) => d.people.length === 0);
-  if (noPeople.length) {
-    issues.push({
-      severity: "alerta",
-      code: "sem-responsavel",
-      message: `${noPeople.length} ${noPeople.length === 1 ? "demanda" : "demandas"} sem responsável em PLANEJAMENTO ou DIRETOR DE ARTE.`,
-      rows: noPeople.map((d) => d.row),
-    });
-  }
-  const noPriority = demands.filter((d) => d.priority === "(sem prioridade)");
-  if (noPriority.length) {
-    issues.push({
-      severity: "info",
-      code: "sem-prioridade",
-      message: `${noPriority.length} ${noPriority.length === 1 ? "demanda está" : "demandas estão"} sem PRIORIDADE.`,
-      rows: noPriority.map((d) => d.row),
-    });
-  }
+  // Verificações por demanda: cada divergência aponta guia e linha.
+  const perRow = (code: string, severity: QualityIssue["severity"], test: (d: Demand) => boolean, text: (d: Demand) => string) =>
+    demands.filter(test).forEach((d) =>
+      issues.push({ severity, code, tab: d.sourceTab, rows: [d.row], message: `${text(d)} ${where(d.sourceTab, [d.row])}.` }),
+    );
+  perRow(
+    "aberta-sem-prazo",
+    "alerta",
+    (d) => d.isOpen && !d.due && d.statusCategory !== "travado" && d.statusCategory !== "briefing",
+    (d) => `"${d.task}" está aberta e em produção, mas sem data de ENTREGA`,
+  );
+  perRow("sem-responsavel", "alerta", (d) => d.people.length === 0, (d) => `"${d.task}" está sem responsável em PLANEJAMENTO ou DIRETOR DE ARTE`);
+  perRow("sem-prioridade", "info", (d) => d.priority === "(sem prioridade)", (d) => `"${d.task}" está sem PRIORIDADE`);
+  perRow(
+    "finalizada-sem-data",
+    "info",
+    (d) => !d.isOpen && (!d.start || !d.due),
+    (d) => `"${d.task}" está finalizada sem INÍCIO ou ENTREGA e fica fora da linha do tempo`,
+  );
   if (!capProject) {
     issues.push({
       severity: "info",
@@ -455,15 +449,6 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         "Não existe coluna PROJETO. A contagem de projetos é uma estimativa: tarefas do mesmo cliente com o mesmo nome, ignorando versões (V2, V3) e idioma (ENG, Inglês), formam um projeto.",
     });
   }
-  if (!capCompleted) {
-    issues.push({
-      severity: "info",
-      code: "sem-data-conclusao",
-      message:
-        "Não existe coluna de data de conclusão. Por isso não é possível medir entregas dentro do prazo nem tempo médio de execução; ENTREGA é tratada como prazo planejado.",
-    });
-  }
-
   const reconciliation = reconcile(sheets, demands, tabs, now);
   reconciliation
     .filter((r) => r.sheet !== r.dashboard)
