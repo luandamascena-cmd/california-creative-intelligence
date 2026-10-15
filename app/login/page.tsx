@@ -65,7 +65,7 @@ export default function LoginPage() {
           <label htmlFor="password" className="sr-only">
             Senha de acesso
           </label>
-          <div className="group flex h-12 items-center gap-2 rounded-xl border border-white/15 bg-black/45 pl-4 pr-1.5 backdrop-blur-md transition focus-within:border-clf-red">
+          <div className="glass group flex h-14 items-center gap-2 rounded-full pl-5 pr-1.5 transition">
             <Lock size={15} className="text-paper-dim" aria-hidden />
             <input
               id="password"
@@ -82,7 +82,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !password}
-              className="flex h-9 items-center gap-2 rounded-lg bg-clf-red px-4 text-[13px] font-semibold text-paper transition hover:brightness-110 disabled:opacity-40"
+              className="glass-btn flex h-11 items-center gap-2 rounded-full px-5 text-[13.5px] font-semibold text-paper transition disabled:cursor-not-allowed disabled:opacity-45"
             >
               {loading ? <Loader2 size={15} className="animate-spin" /> : <>Entrar <ArrowRight size={15} /></>}
             </button>
