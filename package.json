@@ -1,0 +1,38 @@
+{
+  "name": "california-creative-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "snapshot": "tsx scripts/build-snapshot.ts",
+    "check:data": "tsx scripts/check-data.ts"
+  },
+  "dependencies": {
+    "@fontsource/antonio": "^5.1.0",
+    "@fontsource/archivo": "^5.1.0",
+    "@fontsource/oswald": "^5.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "echarts": "^6.0.0",
+    "jose": "^6.1.0",
+    "lucide-react": "^0.468.0",
+    "motion": "^12.0.0",
+    "next": "^15.5.28",
+    "postcss": "^8.4.49",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

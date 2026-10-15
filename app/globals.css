@@ -1,0 +1,79 @@
+@import "@fontsource/antonio/400.css";
+@import "@fontsource/antonio/600.css";
+@import "@fontsource/antonio/700.css";
+@import "@fontsource/oswald/500.css";
+@import "@fontsource/oswald/700.css";
+@import "@fontsource/archivo/400.css";
+@import "@fontsource/archivo/500.css";
+@import "@fontsource/archivo/600.css";
+@import "@fontsource/archivo/800.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+html,
+body {
+  background: #0b0b0c;
+  color: #fffbf0;
+  font-family: Archivo, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2e2e32 transparent;
+}
+::selection {
+  background: #e7103d;
+  color: #fffbf0;
+}
+:focus-visible {
+  outline: 2px solid #e7103d;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-ink-700 bg-ink-850 shadow-card;
+  }
+  .eyebrow {
+    @apply font-sans text-[10.5px] font-semibold uppercase tracking-wide2 text-paper-mute;
+  }
+  .display {
+    @apply font-display uppercase leading-none;
+  }
+  .select {
+    @apply h-9 w-full appearance-none rounded-lg border border-ink-600 bg-ink-800 pl-3 pr-8 text-[13px] text-paper outline-none transition hover:border-ink-500 focus:border-clf-red;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238F8D88' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  .field {
+    @apply h-9 w-full rounded-lg border border-ink-600 bg-ink-800 px-3 text-[13px] text-paper outline-none transition placeholder:text-paper-faint hover:border-ink-500 focus:border-clf-red;
+  }
+  .btn {
+    @apply inline-flex h-9 items-center gap-2 rounded-lg border border-ink-600 bg-ink-800 px-3 text-[13px] font-medium text-paper-dim transition hover:border-ink-500 hover:text-paper disabled:opacity-50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-2.5 py-1 text-[12px] text-paper-dim;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  aside, .no-print { display: none !important; }
+  html, body { background: #0b0b0c !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .card { break-inside: avoid; }
+  @page { size: A3 landscape; margin: 10mm; }
+}
