@@ -133,3 +133,19 @@ body {
 .glass-btn:not(:disabled):active {
   transform: translateY(1px);
 }
+
+/* Preenchimento automático do navegador: mantém o campo translúcido, sem o fundo azul/amarelo. */
+.glass input:-webkit-autofill,
+.glass input:-webkit-autofill:hover,
+.glass input:-webkit-autofill:focus,
+.glass input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fffbf0;
+  caret-color: #fffbf0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  transition: background-color 600000s 0s, color 600000s 0s;
+  box-shadow: none;
+}
+.glass input:autofill {
+  background: transparent;
+}
