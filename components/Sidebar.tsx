@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, ShieldCheck } from "lucide-react";
 import type { TabInfo } from "@/lib/types";
+import { regionalName } from "@/lib/labels";
 
 interface Props {
   tabs: TabInfo[];
@@ -70,12 +71,12 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
               const teams = tabs.filter((t) => t.regional === r);
               return (
                 <li key={r}>
-                  <button className={item(active && !team)} onClick={() => onNavigate(r, null)} aria-current={active ? "page" : undefined} title={`Regional ${r}`}>
+                  <button className={item(active && !team)} onClick={() => onNavigate(r, null)} aria-current={active ? "page" : undefined} title={regionalName(r)}>
                     {active && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
-                    {collapsed ? <span className="w-full text-center font-display text-[15px]">{r}</span> : <MapPin size={16} className="shrink-0" />}
+                    {collapsed ? <span className="w-full text-center text-[11px] font-semibold">{regionalName(r).split(" ").map((w) => w[0]).join("")}</span> : <MapPin size={16} className="shrink-0" />}
                     {!collapsed && (
                       <>
-                        <span className="flex-1 font-display text-[15px] tracking-[0.08em]">{r}</span>
+                        <span className="flex-1">{regionalName(r)}</span>
                         <span className={`text-[11px] tabular-nums ${count(r) ? "text-paper-faint" : "text-ink-500"}`}>{count(r)}</span>
                       </>
                     )}
@@ -108,16 +109,16 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
 
         <div>
           {!collapsed && <p className="eyebrow mb-2 px-3">Confiabilidade</p>}
-          <button className={item(false)} onClick={onQuality} title="Qualidade dos dados">
+          <button className={item(false)} onClick={onQuality} title="Qualidade dos Dados">
             <ShieldCheck size={16} className="shrink-0" />
-            {!collapsed && <span className="flex-1">Qualidade dos dados</span>}
+            {!collapsed && <span className="flex-1">Qualidade dos Dados</span>}
             {alerts > 0 && (
               <span className={`rounded-full bg-[#c98500]/20 px-1.5 text-[10.5px] font-semibold text-[#e0a73a] ${collapsed ? "absolute right-1 top-1" : ""}`}>{alerts}</span>
             )}
           </button>
-          <button className={item(false)} onClick={onGlossary} title="Definições das métricas">
+          <button className={item(false)} onClick={onGlossary} title="Definições das Métricas">
             <BookOpen size={16} className="shrink-0" />
-            {!collapsed && <span>Definições das métricas</span>}
+            {!collapsed && <span>Definições das Métricas</span>}
           </button>
         </div>
       </nav>

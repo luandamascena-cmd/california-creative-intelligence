@@ -170,8 +170,10 @@ body {
 
 /* Fundo com imagem desfocada, usado na central e na dashboard */
 .ci-backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.ci-backdrop img { position: absolute; inset: -60px; width: calc(100% + 120px); height: calc(100% + 120px); object-fit: cover; filter: blur(48px) saturate(120%); transform: scale(1.05); }
-.ci-backdrop::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(11,11,12,0.55) 0%, rgba(11,11,12,0.82) 60%, rgba(11,11,12,0.9) 100%); }
+.ci-backdrop img { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(18px) saturate(130%); }
+.ci-backdrop::after { content: ""; position: absolute; inset: 0; background:
+  radial-gradient(ellipse 70% 55% at 50% 38%, rgba(231,16,61,0.18) 0%, rgba(231,16,61,0) 70%),
+  radial-gradient(ellipse at 50% 0%, rgba(11,11,12,0.35) 0%, rgba(11,11,12,0.7) 60%, rgba(11,11,12,0.88) 100%); }
 
 /* Mapa: pontos que cintilam e pulsos que percorrem a rede */
 @keyframes ci-twinkle {

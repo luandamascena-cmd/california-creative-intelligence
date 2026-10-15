@@ -98,7 +98,7 @@ export function KpiGrid({ k, caps, onStatus, onLate }: { k: Kpis; caps: Capabili
         <span className="hidden h-6 w-px bg-white/[0.12] lg:block" />
         <Stat label="Regionais ativas" value={k.regionals} />
         <Stat label="Times ativos" value={k.teams} />
-        <Stat label="BUs ativas" value={k.bus} />
+        <Stat label="Business Units ativas" value={k.bus} />
         {k.medianPlannedDays !== null && <Stat label="Prazo planejado mediano" value={k.medianPlannedDays} suffix={k.medianPlannedDays === 1 ? " dia" : " dias"} title="Mediana de dias entre INÍCIO e ENTREGA" />}
       </div>
     </section>

@@ -2,6 +2,7 @@
 
 import type { Demand, StatusCategory } from "./types";
 import { addDaysISO, diffDays, todayISO } from "./text";
+import { regionalName, tabLabel } from "./labels";
 
 export interface Filters {
   regional: string | null;
@@ -155,9 +156,9 @@ export const CAT_LABEL: Record<StatusCategory, string> = {
 
 export function toCsv(rows: Demand[]): string {
   const cols: [string, (d: Demand) => string][] = [
-    ["Guia", (d) => d.sourceTab],
+    ["Time de origem", (d) => tabLabel(d.sourceTab)],
     ["Linha", (d) => String(d.row)],
-    ["Regional", (d) => d.regional],
+    ["Regional", (d) => regionalName(d.regional)],
     ["Time", (d) => d.team],
     ["Grupo", (d) => d.group],
     ["Tarefa", (d) => d.task],

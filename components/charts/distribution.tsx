@@ -56,7 +56,7 @@ export function ClientsChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="01"
-      title="Demandas por cliente"
+      title="Demandas por Clientes"
       className={className}
       definition="Quantidade de demandas (linhas da pauta) por valor da coluna CLIENTE, do maior para o menor, com a participação no total filtrado. Clientes internos (ex.: Originals, Content House) aparecem como estão na planilha."
       empty={!data.length && "Nenhuma demanda no filtro atual."}
@@ -133,22 +133,22 @@ export function BuChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="02"
-      title={mode === "bu" ? "Demandas por Business Unit" : "Demandas por time"}
+      title={mode === "bu" ? "Demandas por Business Unit" : "Demandas por Times"}
       className={className}
-      definition="BU da demanda vem da coluna BUSINESS UNIT; time é o time executor, lido do nome da guia (ex.: SP | Content House). Uma guia de um time pode atender demandas de várias BUs. Na Visão Geral, a mesma BU soma todas as regionais."
+      definition="A Business Unit da demanda vem da coluna BUSINESS UNIT; o time é o time executor, lido do nome da guia (ex.: São Paulo · Content House). Um time pode atender demandas de várias Business Units. Na Visão Geral, a mesma Business Unit soma todas as regionais."
       actions={
         <Segmented
           label="Agrupar por"
           value={mode}
           onChange={setMode}
           options={[
-            { value: "bu", label: "BU" },
+            { value: "bu", label: "Business Unit" },
             { value: "team", label: "Time" },
           ]}
         />
       }
       empty={!data.length && "Nenhuma demanda no filtro atual."}
-      table={{ columns: [mode === "bu" ? "BU" : "Time", "Demandas", "%"], rows: data.map((d) => [d.name, d.value, fmtPct(d.value, total)]) }}
+      table={{ columns: [mode === "bu" ? "Business Unit" : "Time", "Demandas", "%"], rows: data.map((d) => [d.name, d.value, fmtPct(d.value, total)]) }}
     >
       {(ref) => (
         <EChart
@@ -159,7 +159,7 @@ export function BuChart({ rows, ctx, className }: ChartProps) {
           onClick={(e) =>
             ctx.drill({
               title: e.name,
-              subtitle: mode === "bu" ? "Demandas da BU" : "Demandas do time",
+              subtitle: mode === "bu" ? "Demandas da Business Unit" : "Demandas do time",
               rows: rows.filter((d) => (mode === "bu" ? d.bu : d.team) === e.name),
               apply: mode === "bu" ? { bu: e.name } : { team: e.name },
             })
@@ -215,7 +215,7 @@ export function FormatsChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="03"
-      title="Formatos"
+      title="Formatos das Demandas"
       className={className}
       definition="Distribuição das demandas pela coluna FORMATO. Os seis formatos mais frequentes têm cor própria; os demais são agrupados em Outros (passe o cursor para ver quais)."
       empty={!slices.length && "Nenhuma demanda no filtro atual."}
@@ -258,7 +258,7 @@ export function TopClients({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="10"
-      title="Top 10 clientes"
+      title="Top 10 Clientes"
       className={className}
       definition="Os dez clientes com mais demandas no filtro. A coluna Acum. mostra a participação somada até aquela posição, uma leitura direta de concentração da pauta."
       empty={!top.length && "Nenhuma demanda no filtro atual."}
@@ -342,12 +342,12 @@ export function NatureChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="13"
-      title="Natureza do trabalho por BU"
+      title="Natureza do Trabalho por Business Unit"
       className={className}
-      definition="Composição de cada BU pela coluna TIPO DE PROJETO, em % das demandas da BU. Cliente, Prospecção e Concorrência são trabalho voltado ao mercado; Proprietário e Institucional são projetos da casa."
+      definition="Composição de cada Business Unit pela coluna TIPO DE PROJETO, em % das demandas da Business Unit. Cliente, Prospecção e Concorrência são trabalho voltado ao mercado; Proprietário e Institucional são projetos da casa."
       empty={!rows.length && "Nenhuma demanda no filtro atual."}
       table={{
-        columns: ["BU", ...ordered],
+        columns: ["Business Unit", ...ordered],
         rows: bus.map((b) => [b, ...ordered.map((t) => rows.filter((d) => d.bu === b && d.projectType === t).length)]),
       }}
     >
@@ -365,7 +365,7 @@ export function NatureChart({ rows, ctx, className }: ChartProps) {
             ref={ref}
             option={option}
             height={Math.max(200, bus.length * 34 + 50)}
-            ariaLabel="Composição de cada BU por tipo de projeto"
+            ariaLabel="Composição de cada Business Unit por tipo de projeto"
             onClick={(e) =>
               ctx.drill({
                 title: `${e.name} · ${e.seriesName}`,
@@ -390,11 +390,11 @@ export function FormatsByBu({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="14"
-      title="Formatos por BU"
+      title="Formatos por Business Unit"
       className={className}
-      definition="Os três formatos mais pedidos em cada BU, com a quantidade de demandas. Ajuda a dimensionar especialidades por unidade de negócio."
+      definition="Os três formatos mais pedidos em cada Business Unit, com a quantidade de demandas. Ajuda a dimensionar especialidades por unidade de negócio."
       empty={!groups.length && "Nenhuma demanda no filtro atual."}
-      table={{ columns: ["BU", "Formato", "Demandas"], rows: groups.flatMap((g) => g.formats.map((f) => [g.bu, f.name, f.value])) }}
+      table={{ columns: ["Business Unit", "Formato", "Demandas"], rows: groups.flatMap((g) => g.formats.map((f) => [g.bu, f.name, f.value])) }}
     >
       {() => (
         <ul className="divide-y divide-white/[0.08]">
@@ -448,7 +448,7 @@ export function PriorityChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="15"
-      title="Prioridade"
+      title="Demandas por Prioridade"
       className={className}
       definition="Demandas por PRIORIDADE, separando abertas (qualquer status diferente de Finalizado) e finalizadas."
       empty={!rows.length && "Nenhuma demanda no filtro atual."}

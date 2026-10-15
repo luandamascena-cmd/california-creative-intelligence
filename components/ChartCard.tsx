@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Download, Info, Table2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { EChartHandle } from "./EChart";
+import { titleCase } from "@/lib/labels";
 
 export interface TableData {
   columns: string[];
@@ -40,7 +41,7 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
       <header className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 id={`${slug}-t`} className="truncate text-[15px] font-semibold tracking-[-0.005em] text-paper">
-            {title}
+            {titleCase(title)}
           </h2>
           {showDef && <p className="mt-2 max-w-prose text-[12px] leading-relaxed text-paper-mute">{definition}</p>}
         </div>

@@ -10,6 +10,7 @@ import type {
   TabInfo,
 } from "./types";
 import { addDaysISO, clean, normKey, parseDate, splitPeople, todayISO } from "./text";
+import { tabLabel } from "./labels";
 
 export interface RawSheet {
   title: string;
@@ -210,7 +211,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         severity: "erro",
         code: "sem-cabecalho",
         tab: sheet.title,
-        message: `A guia "${sheet.title}" não tem a linha de cabeçalho com a coluna TAREFA e foi ignorada.`,
+        message: `A guia "${tabLabel(sheet.title)}" não tem a linha de cabeçalho com a coluna TAREFA e foi ignorada.`,
       });
       continue;
     }
@@ -221,7 +222,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         severity: "alerta",
         code: "colunas-ausentes",
         tab: sheet.title,
-        message: `Colunas não encontradas em "${sheet.title}": ${missing.join(", ")}.`,
+        message: `Colunas não encontradas em "${tabLabel(sheet.title)}": ${missing.join(", ")}.`,
       });
     }
     capStatus ||= col.status !== undefined;
@@ -247,7 +248,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "sem-tarefa",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `Linha ${rowNumber} de "${sheet.title}" tem dados mas está sem TAREFA.`,
+          message: `Linha ${rowNumber} de "${tabLabel(sheet.title)}" tem dados mas está sem TAREFA.`,
         });
         task = "(sem título)";
       }
@@ -274,7 +275,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
           code: "data-invalida",
           tab: sheet.title,
           rows: [rowNumber],
-          message: `Data não reconhecida na linha ${rowNumber} de "${sheet.title}" ("${task}").`,
+          message: `Data não reconhecida na linha ${rowNumber} de "${tabLabel(sheet.title)}" ("${task}").`,
         });
       }
       if (startP.iso && dueP.iso && dueP.iso < startP.iso) {
@@ -310,7 +311,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         group: get(raw, "group"),
         task,
         client: client || "(sem cliente)",
-        bu: bu || "(sem BU)",
+        bu: bu || "(sem Business Unit)",
         status: status || "(sem status)",
         statusCategory: cat,
         start: startP.iso,
@@ -350,7 +351,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         });
         continue;
       }
-      seenExact.set(exactSig, `${sheet.title} linha ${rowNumber}`);
+      seenExact.set(exactSig, `${tabLabel(sheet.title)}, linha ${rowNumber}`);
 
       // Possíveis duplicatas: mesma tarefa, cliente e datas, com algum campo diferente.
       const nearSig = [normKey(d.task), normKey(d.client), d.start, d.due].join("|");
@@ -471,7 +472,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         severity: "info",
         code: "conferencia",
         tab: r.tab,
-        message: `Conferência com a Visão Geral: ${r.metric} em "${r.tab}" é ${r.sheet} na planilha e ${r.dashboard} aqui.`,
+        message: `Conferência com a Visão Geral: ${r.metric} em "${tabLabel(r.tab)}" é ${r.sheet} na planilha e ${r.dashboard} aqui.`,
       }),
     );
 

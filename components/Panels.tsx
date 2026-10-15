@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import type { Dataset, IssueSeverity } from "@/lib/types";
+import { tabLabel } from "@/lib/labels";
 
 function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
   return (
@@ -45,7 +46,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
   const issues = [...data.issues].sort((a, b) => order.indexOf(a.severity) - order.indexOf(b.severity));
   const recon = data.reconciliation.filter((r) => r.sheet > 0 || r.dashboard > 0);
   return (
-    <Modal open={open} title="Qualidade dos dados" onClose={onClose}>
+    <Modal open={open} title="Qualidade dos Dados" onClose={onClose}>
       <section className="mb-6">
         <h3 className="eyebrow mb-3">Conferência com a guia Visão Geral</h3>
         {recon.length ? (
@@ -63,7 +64,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
               <tbody>
                 {recon.map((r) => (
                   <tr key={r.tab + r.metric} className="border-t border-white/[0.08]">
-                    <td className="px-3 py-1.5">{r.tab}</td>
+                    <td className="px-3 py-1.5">{tabLabel(r.tab)}</td>
                     <td className="px-3 py-1.5 text-paper-dim">{r.metric}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{r.sheet}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{r.dashboard}</td>
@@ -86,7 +87,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
           {data.tabs.map((t) => (
             <div key={t.title} className="flex items-center justify-between rounded-lg bg-white/[0.06] px-3 py-2 text-[12.5px]">
               <span>
-                {t.title} <span className="text-paper-faint">· cabeçalho na linha {t.headerRow ?? "?"}</span>
+                {tabLabel(t.title)} <span className="text-paper-faint">· cabeçalho na linha {t.headerRow ?? "?"}</span>
               </span>
               <span className="tabular-nums text-paper-dim">{t.rows} registros</span>
             </div>
@@ -117,9 +118,9 @@ const TERMS: [string, string][] = [
   ["Demanda", "Uma linha de uma guia de pauta (um registro operacional de trabalho). É a unidade de todas as contagens, salvo quando o gráfico diz Projetos."],
   ["Projeto", "Iniciativa que agrupa uma ou mais demandas. Sem coluna PROJETO na planilha, é estimado: demandas do mesmo cliente com o mesmo nome de tarefa, ignorando prefixos entre colchetes, versões (V2, V3) e idioma (ENG, Inglês). Crie a coluna PROJETO para tornar a contagem exata; a dashboard passa a usá-la automaticamente."],
   ["Cliente", "Valor da coluna CLIENTE. Inclui marcas da própria casa (ex.: Originals, Content House) quando a planilha registra assim."],
-  ["Business Unit (BU)", "Valor da coluna BUSINESS UNIT: a unidade de negócio a que a demanda pertence."],
-  ["Time", "Time executor, lido do nome da guia (REGIONAL | TIME). Um time pode atender demandas de várias BUs."],
-  ["Regional", "Primeira parte do nome da guia (SP, RJ, NO, NE)."],
+  ["Business Unit", "Valor da coluna BUSINESS UNIT: a unidade de negócio a que a demanda pertence."],
+  ["Time", "Time executor, lido do nome da guia (REGIONAL | TIME). Um time pode atender demandas de várias Business Units."],
+  ["Regional", "Primeira parte do nome da guia, exibida pelo nome da cidade: São Paulo, Rio de Janeiro, Fortaleza e Salvador."],
   ["Abertas", "Demandas com status diferente de Finalizado (inclui Travado e Em Briefing)."],
   ["Atrasadas / vencidas", "Abertas com ENTREGA anterior à data de hoje (fuso de São Paulo)."],
   ["Entregam em 7 dias", "Abertas com ENTREGA entre hoje e daqui a 7 dias."],
@@ -131,7 +132,7 @@ const TERMS: [string, string][] = [
 
 export function GlossaryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
-    <Modal open={open} title="Definições das métricas" onClose={onClose}>
+    <Modal open={open} title="Definições das Métricas" onClose={onClose}>
       <dl className="space-y-4">
         {TERMS.map(([t, d]) => (
           <div key={t} className="grid gap-1 sm:grid-cols-[180px_1fr]">

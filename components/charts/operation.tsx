@@ -66,7 +66,7 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="04"
-      title="Projetos por colaborador"
+      title="Projetos por Colaboradores"
       className={className}
       definition="Cada demanda conta uma vez para cada pessoa citada em PLANEJAMENTO ou DIRETOR DE ARTE (se a mesma pessoa está nas duas colunas, conta uma vez). Projetos são distintos por pessoa. Como uma demanda pode ter várias pessoas, a soma das barras é maior que o total de demandas: o total geral nunca é calculado somando colaboradores."
       actions={
@@ -163,7 +163,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="11"
-      title="Carga aberta por colaborador"
+      title="Carga Aberta por Colaboradores"
       className={className}
       definition="Demandas abertas (status diferente de Finalizado) em que a pessoa aparece como planejamento ou direção de arte, empilhadas por status. Mostra concentração da pauta, não capacidade: a planilha não informa horas nem esforço. 'venc.' indica demandas com ENTREGA anterior a hoje."
       empty={!people.length && "Sem demandas abertas com responsável no filtro atual."}
@@ -222,7 +222,7 @@ export function StatusChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="09"
-      title="Status das demandas"
+      title="Status das Demandas"
       className={className}
       definition="Distribuição pelos valores da coluna STATUS, com as mesmas cores em toda a dashboard. Abertas = qualquer status diferente de Finalizado. Vencidas = abertas com ENTREGA anterior a hoje."
       empty={!data.length && "Nenhuma demanda no filtro atual."}

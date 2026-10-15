@@ -11,7 +11,6 @@ import { KpiGrid } from "./Kpis";
 import { Insights } from "./Insights";
 import { Drawer, downloadCsv } from "./Drawer";
 import { GlossaryModal, QualityModal } from "./Panels";
-import { Backdrop } from "./Backdrop";
 import { BuChart, ClientsChart, FormatsByBu, FormatsChart, NatureChart, PriorityChart, TopClients } from "./charts/distribution";
 import { PeopleChart, StatusChart, WorkloadChart } from "./charts/operation";
 import { DeadlinesPanel, TimelineChart } from "./charts/time";
@@ -20,6 +19,7 @@ import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, computeKpis, EMPTY_FILTERS, isLate, toCsv, CAT_LABEL, type Filters } from "@/lib/analytics";
 import { todayISO } from "@/lib/text";
 import { colorMap } from "./theme";
+import { regionalName, tabLabel } from "@/lib/labels";
 
 const STORE = "ci-filters-v1";
 const KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[];
@@ -118,7 +118,7 @@ export default function Dashboard() {
     ? { today, buColors, buOrder, tabs, filters, capabilities: data.capabilities, drill: setDrill, navigate }
     : null;
 
-  const context = filters.regional ? `${filters.regional}${filters.team ? " · " + filters.team : " · todos os times"}` : "Visão Geral";
+  const context = filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
   const contextTabs = tabs.filter((t) => (!filters.regional || t.regional === filters.regional) && (!filters.team || t.team === filters.team));
   const emptyContext = !!filters.regional && !navRows.length;
   const teamsInRegional = tabs.filter((t) => t.regional === filters.regional).map((t) => t.team);
@@ -181,7 +181,6 @@ export default function Dashboard() {
 
   return (
     <div className="relative flex min-h-screen bg-ink">
-      <Backdrop />
       {!presenting && (
         <Sidebar
           tabs={tabs}
@@ -223,14 +222,14 @@ export default function Dashboard() {
               </button>
               {tabs.map((t) => (
                 <button key={t.title} className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => navigate(t.regional, t.team)}>
-                  {t.title} <span className="text-paper-faint">({t.rows})</span>
+                  {tabLabel(t.title)} <span className="text-paper-faint">({t.rows})</span>
                 </button>
               ))}
               <button className="mt-4 block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => setQuality(true)}>
-                Qualidade dos dados
+                Qualidade dos Dados
               </button>
               <button className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => setGlossary(true)}>
-                Definições das métricas
+                Definições das Métricas
               </button>
             </motion.nav>
           </motion.div>
@@ -282,7 +281,7 @@ export default function Dashboard() {
               <p className="display text-[24px]">{emptyContext ? "Pauta ainda sem registros" : "Sem demandas neste recorte"}</p>
               <p className="mx-auto mt-2 max-w-xl text-[13px] text-paper-mute">
                 {emptyContext
-                  ? `${contextTabs.length === 1 ? "A guia" : "As guias"} ${contextTabs.map((t) => t.title).join(", ")} ${contextTabs.length === 1 ? "existe" : "existem"} na planilha, mas ainda não ${contextTabs.length === 1 ? "tem" : "têm"} demandas. Indicadores e gráficos deste recorte aparecem sozinhos assim que a primeira linha for preenchida. Abaixo, a comparação com as demais regionais.`
+                  ? `${contextTabs.length === 1 ? "A guia" : "As guias"} ${contextTabs.map((t) => tabLabel(t.title)).join(", ")} ${contextTabs.length === 1 ? "existe" : "existem"} na planilha, mas ainda não ${contextTabs.length === 1 ? "tem" : "têm"} demandas. Indicadores e gráficos deste recorte aparecem sozinhos assim que a primeira linha for preenchida. Abaixo, a comparação com as demais regionais.`
                   : "Nenhuma demanda atende à combinação de filtros. Remova algum filtro para ampliar o recorte."}
               </p>
             </div>

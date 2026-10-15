@@ -6,11 +6,16 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 /** Imagens de fundo da tela de acesso, em tela cheia e alternando em sequência. */
 export const BACKDROPS = [
   { src: "/brand/01-casa-fachada.webp", alt: "Fachada da Casa California em São Paulo", position: "50% 40%" },
+  { src: "/brand/07-skate-areia.webp", alt: "Três skatistas em uma pista de concreto", position: "50% 60%" },
   { src: "/brand/04-salvador.webp", alt: "Vista aérea de Salvador e da Baía de Todos os Santos", position: "50% 50%" },
-  { src: "/brand/05-skate.webp", alt: "Ilustração de skatistas na cidade", position: "55% 50%" },
+  { src: "/brand/12-set-camera.webp", alt: "Operador de câmera em um set com luz vermelha", position: "55% 45%" },
   { src: "/brand/03-casa-patio.webp", alt: "Pátio interno da Casa California", position: "40% 50%" },
-  { src: "/brand/06-surf.webp", alt: "Surfista em uma onda grande, em preto e branco", position: "50% 55%" },
+  { src: "/brand/08-skate-amarelo.webp", alt: "Duas skatistas em uma pista de skate", position: "45% 45%" },
+  { src: "/brand/09-surf-dourado.webp", alt: "Surfista em uma onda ao sol", position: "50% 50%" },
   { src: "/brand/02-casa-letreiro.webp", alt: "Letreiro da Casa California", position: "50% 55%" },
+  { src: "/brand/10-surf-entardecer.webp", alt: "Surfistas no mar ao entardecer", position: "60% 55%" },
+  { src: "/brand/13-set-estudio.webp", alt: "Gravação em estúdio com fundo vermelho", position: "50% 45%" },
+  { src: "/brand/11-ceu-violeta.webp", alt: "Céu violeta sobre o mar", position: "50% 50%" },
 ];
 
 const INTERVAL = 7000;

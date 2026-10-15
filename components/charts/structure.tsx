@@ -5,6 +5,7 @@ import { ChartCard } from "../ChartCard";
 import { EChart } from "../EChart";
 import { C, OTHER, SEQUENTIAL, axisLabel, splitLine, tooltipBase } from "../theme";
 import { fmtPct } from "@/lib/analytics";
+import { regionalName, tabLabel } from "@/lib/labels";
 import type { ChartProps } from "./types";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -49,16 +50,16 @@ export function ProjectsByBu({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="05"
-      title="Projetos por BU"
+      title="Projetos por Business Unit"
       className={className}
       definition={
         ctx.capabilities.hasProjectColumn
-          ? "Projetos distintos (coluna PROJETO) associados a cada BU."
+          ? "Projetos distintos (coluna PROJETO) associados a cada Business Unit."
           : "Estimativa: sem coluna PROJETO, tarefas do mesmo cliente com o mesmo nome, ignorando versões (V2, V3) e idioma (ENG, Inglês), contam como um projeto. Passe o cursor para ver demandas por projeto."
       }
       actions={!ctx.capabilities.hasProjectColumn ? <span className="mr-1 rounded border border-white/[0.12] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-paper-mute">Estimativa</span> : null}
       empty={!data.length && "Nenhuma demanda no filtro atual."}
-      table={{ columns: ["BU", "Projetos", "Demandas"], rows: data.map((d) => [d.name, d.projects, d.demands]) }}
+      table={{ columns: ["Business Unit", "Projetos", "Demandas"], rows: data.map((d) => [d.name, d.projects, d.demands]) }}
     >
       {(ref) => (
         <EChart
@@ -66,7 +67,7 @@ export function ProjectsByBu({ rows, ctx, className }: ChartProps) {
           option={option}
           height={260}
           ariaLabel="Projetos estimados por unidade de negócio"
-          onClick={(e) => ctx.drill({ title: e.name, subtitle: "Demandas da BU", rows: rows.filter((d) => d.bu === e.name), apply: { bu: e.name } })}
+          onClick={(e) => ctx.drill({ title: e.name, subtitle: "Demandas da Business Unit", rows: rows.filter((d) => d.bu === e.name), apply: { bu: e.name } })}
         />
       )}
     </ChartCard>
@@ -92,10 +93,10 @@ export function RegionalChart({ rows, ctx, className }: ChartProps) {
         trigger: "item",
         formatter: (p: { dataIndex: number }) => {
           const d = data[p.dataIndex];
-          return `<b>${d.name}</b> · ${d.teams} ${d.teams === 1 ? "time" : "times"}<br/>${d.projects} projetos · ${d.demands} demandas<br/><span style="color:${C.mute}">Clique para abrir a regional</span>`;
+          return `<b>${regionalName(d.name)}</b> · ${d.teams} ${d.teams === 1 ? "time" : "times"}<br/>${d.projects} projetos · ${d.demands} demandas<br/><span style="color:${C.mute}">Clique para abrir a regional</span>`;
         },
       },
-      xAxis: { type: "category", data: data.map((d) => d.name), axisTick: { show: false }, axisLine: { lineStyle: { color: C.line } }, axisLabel: { color: C.dim, fontFamily: "Antonio", fontSize: 15 } },
+      xAxis: { type: "category", data: data.map((d) => d.name), axisTick: { show: false }, axisLine: { lineStyle: { color: C.line } }, axisLabel: { color: C.dim, fontSize: 11.5, interval: 0, width: 80, overflow: "break", formatter: (v: string) => regionalName(v) } },
       yAxis: { type: "value", splitLine, axisLabel, minInterval: 1 },
       series: [
         {
@@ -123,10 +124,10 @@ export function RegionalChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="06"
-      title="Projetos por regional"
+      title="Projetos por Regionais"
       className={className}
       definition="Projetos (estimados) por regional, lida do nome da guia. Compara todas as regionais com os filtros de cliente, BU, colaborador etc. aplicados; a regional aberta fica em vermelho. Clique em uma barra para abrir a regional."
-      table={{ columns: ["Regional", "Projetos", "Demandas", "Times"], rows: data.map((d) => [d.name, d.projects, d.demands, d.teams]) }}
+      table={{ columns: ["Regional", "Projetos", "Demandas", "Times"], rows: data.map((d) => [regionalName(d.name), d.projects, d.demands, d.teams]) }}
     >
       {(ref) => (
         <EChart ref={ref} option={option} height={260} ariaLabel="Projetos por regional" onClick={(e) => ctx.navigate(e.name, null)} />
@@ -166,7 +167,7 @@ export function HeatmapChart({ rows, ctx, className }: ChartProps) {
         ...tooltipBase,
         formatter: (p: { value: [number, number, number] }) => {
           const [x, y, v] = p.value;
-          return `<b>${esc(tabs[y])}</b> × <b>${esc(bus[x])}</b><br/>${v} demandas`;
+          return `<b>${esc(tabLabel(tabs[y]))}</b><br/>${esc(bus[x])}: ${v} demandas`;
         },
       },
       visualMap: { show: false, min: 0, max, inRange: { color: SEQUENTIAL } },
@@ -178,7 +179,7 @@ export function HeatmapChart({ rows, ctx, className }: ChartProps) {
         axisTick: { show: false },
         axisLine: { show: false },
         axisLabel: {
-          formatter: (v: string, i: number) => `{${active(v) ? "a" : "d"}|${v}}  {n|${tabTotals[i]}}`,
+          formatter: (v: string, i: number) => `{${active(v) ? "a" : "d"}|${tabLabel(v)}}  {n|${tabTotals[i]}}`,
           rich: { a: { color: C.paper, fontSize: 11.5 }, d: { color: C.faint, fontSize: 11.5 }, n: { color: C.mute, fontSize: 10.5 } },
         },
       },
@@ -198,10 +199,10 @@ export function HeatmapChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="07"
-      title="Time × Business Unit"
+      title="Times por Business Unit"
       className={className}
-      definition="Cruza cada guia (regional | time executor) com a BU da demanda. A intensidade da cor indica o volume de demandas. Todos os times existentes na planilha aparecem, inclusive os que ainda não têm registros; os que estão fora do contexto aberto ficam esmaecidos."
-      table={{ columns: ["Time", ...bus], rows: tabs.map((t) => [t, ...bus.map((b) => rows.filter((d) => d.sourceTab === t && d.bu === b).length)]) }}
+      definition="Cruza cada time (regional e time executor) com a Business Unit da demanda. A intensidade da cor indica o volume de demandas. Todos os times existentes na planilha aparecem, inclusive os que ainda não têm registros; os que estão fora do contexto aberto ficam esmaecidos."
+      table={{ columns: ["Time", ...bus], rows: tabs.map((t) => [tabLabel(t), ...bus.map((b) => rows.filter((d) => d.sourceTab === t && d.bu === b).length)]) }}
       empty={!bus.length && "Nenhuma demanda no filtro atual."}
     >
       {(ref) => (
@@ -214,7 +215,7 @@ export function HeatmapChart({ rows, ctx, className }: ChartProps) {
             const [x, y] = e.value as [number, number, number];
             const tab = ctx.tabs.find((t) => t.title === tabs[y])!;
             ctx.drill({
-              title: `${tabs[y]} × ${bus[x]}`,
+              title: `${tabLabel(tabs[y])} · ${bus[x]}`,
               rows: rows.filter((d) => d.sourceTab === tabs[y] && d.bu === bus[x]),
               apply: { regional: tab.regional, team: tab.team, bu: bus[x] },
             });

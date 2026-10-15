@@ -16,7 +16,7 @@ interface Props {
 
 const LABELS: Record<string, string> = {
   team: "Time",
-  bu: "BU",
+  bu: "Business Unit",
   client: "Cliente",
   person: "Colaborador",
   format: "Formato",
@@ -46,7 +46,7 @@ export function FilterBar({ base, filters, caps, teams, onChange, onClear }: Pro
       <button className="btn w-full justify-center md:hidden" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <SlidersHorizontal size={14} /> Filtros{active.length ? ` (${active.length})` : ""}
       </button>
-      <div className={`${open ? "grid" : "hidden"} grid-cols-2 md:grid gap-2 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-[repeat(7,minmax(0,1fr))_auto]`}>
+      <div className={`${open ? "grid" : "hidden"} grid-cols-2 md:grid gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-[repeat(auto-fill,minmax(176px,1fr))]`}>
         {fields
           .filter((f) => f.show)
           .map((f) => (
@@ -67,7 +67,7 @@ export function FilterBar({ base, filters, caps, teams, onChange, onClear }: Pro
             </label>
           ))}
         {caps.hasDates && (
-          <div className="col-span-2 flex min-w-0 items-center gap-1.5 sm:col-span-3 lg:col-span-2 2xl:col-span-1">
+          <div className="col-span-2 flex min-w-0 items-center gap-1.5 sm:col-span-3 lg:col-span-2">
             <select className="select w-[104px] shrink-0" value={filters.dateField} onChange={(e) => onChange({ dateField: e.target.value as Filters["dateField"] })} aria-label="Campo de data">
               <option value="start">Início</option>
               <option value="due">Entrega</option>

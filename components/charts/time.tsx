@@ -103,7 +103,7 @@ export function TimelineChart({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="08"
-      title="Evolução das demandas"
+      title="Evolução das Demandas"
       className={className}
       definition="Entradas: demandas agrupadas pela data de INÍCIO. Entregas previstas: agrupadas pela data de ENTREGA (prazo planejado, não a data em que foi entregue, que a planilha não registra). Demandas sem data ficam fora deste gráfico."
       actions={
@@ -235,7 +235,7 @@ export function DeadlinesPanel({ rows, ctx, className }: ChartProps) {
   return (
     <ChartCard
       code="12"
-      title="Prazos e atrasos"
+      title="Prazos e Atrasos"
       className={className}
       definition="Considera apenas demandas abertas. Vencidas: ENTREGA anterior a hoje. Próximos 7 dias: ENTREGA entre hoje e daqui a 7 dias. O calendário mostra quantas entregas abertas estão previstas por dia (contorno claro = hoje). Entregas no prazo e tempo médio de execução não são calculáveis porque a planilha não registra a data em que cada demanda foi concluída."
       empty={!open.length && "Nenhuma demanda aberta no filtro atual."}

@@ -7,6 +7,7 @@ import type { DrillRequest } from "./charts/types";
 import { isLate, toCsv } from "@/lib/analytics";
 import { formatDateBR, normKey } from "@/lib/text";
 import { LATE, STATUS_COLORS } from "./theme";
+import { tabLabel } from "@/lib/labels";
 
 export function downloadCsv(name: string, csv: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -92,7 +93,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                     </div>
                     <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] sm:grid-cols-3">
                       <Field k="Cliente" v={d.client} />
-                      <Field k="BU" v={d.bu} />
+                      <Field k="Business Unit" v={d.bu} />
                       <Field k="Formato" v={d.format} />
                       <Field k="Planejamento" v={d.planners.join(", ") || "sem responsável"} />
                       <Field k="Direção de arte" v={d.artDirectors.join(", ") || "sem responsável"} />
@@ -101,7 +102,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                       <Field k="Entrega" v={formatDateBR(d.due) || "sem data"} color={late ? LATE : undefined} extra={late ? " · vencida" : ""} />
                       <Field k="Tipo" v={d.projectType} />
                       <Field k="Projeto (regra)" v={d.projectLabel} wide />
-                      <Field k="Origem" v={`${d.sourceTab} · linha ${d.row}`} wide />
+                      <Field k="Origem na planilha" v={`${tabLabel(d.sourceTab)} · linha ${d.row}`} wide />
                       {d.notes && <Field k="Observações" v={d.notes} wide />}
                     </dl>
                   </li>

@@ -163,7 +163,7 @@ export default function Hub() {
               className="card p-5"
             >
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold text-paper">Termômetro da pauta</h2>
+                <h2 className="text-[15px] font-semibold text-paper">Termômetro da Pauta</h2>
                 <span title={PRESSURE_DEFINITION} className="cursor-help text-paper-mute">
                   <Info size={15} aria-label={PRESSURE_DEFINITION} />
                 </span>
@@ -182,7 +182,7 @@ export default function Hub() {
               <p className="mt-3 border-t border-white/[0.07] pt-3 text-[11.5px] leading-relaxed text-paper-mute">
                 {hottest ? (
                   <>
-                    <b className="text-paper">{hottest.code}</b> lidera a pressão: {hottest.pressure.reasons.join("; ")}.
+                    <b className="text-paper">{hottest.city}</b> lidera a pressão: {hottest.pressure.reasons.join("; ")}.
                   </>
                 ) : (
                   "Nenhuma regional com sinal de pressão agora."
@@ -218,8 +218,8 @@ function ThermoRow({ r, expanded, highlighted, onToggle }: { r: RegionalView; ex
   const empty = p.level === "sem-dados";
   return (
     <li className={`transition ${highlighted ? "bg-white/[0.04]" : ""} -mx-2 rounded-xl px-2`}>
-      <button onClick={onToggle} aria-expanded={expanded} className="grid w-full grid-cols-[36px_1fr_auto_16px] items-center gap-3 py-3 text-left">
-        <span className="display text-[20px] text-paper">{r.code}</span>
+      <button onClick={onToggle} aria-expanded={expanded} className="grid w-full grid-cols-[112px_1fr_auto_16px] items-center gap-3 py-3 text-left">
+        <span className="truncate text-[14px] font-medium text-paper">{r.city}</span>
         <span className="block h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
           <motion.span
             className="block h-full rounded-full"
@@ -244,8 +244,7 @@ function ThermoRow({ r, expanded, highlighted, onToggle }: { r: RegionalView; ex
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="pb-4 pl-[48px]">
-              <p className="mb-3 text-[12px] text-paper-mute">{r.city}</p>
+            <div className="pb-4">
               {empty ? (
                 <p className="text-[12.5px] text-paper-dim">Pauta ainda sem demandas registradas.</p>
               ) : (
@@ -270,7 +269,7 @@ function ThermoRow({ r, expanded, highlighted, onToggle }: { r: RegionalView; ex
                   </Link>
                 ))}
                 <Link href={dashboardHref(r.code)} className="ml-auto inline-flex items-center gap-1 text-[12.5px] font-medium text-paper hover:text-clf-red">
-                  Abrir {r.code} <ArrowRight size={14} />
+                  Abrir {r.city} <ArrowRight size={14} />
                 </Link>
               </div>
             </div>
@@ -363,8 +362,8 @@ function BrazilMap({ regionals, onHover }: { regionals: RegionalView[]; onHover:
 
         {pins.map((r, k) => {
           const [x, y] = r.pin!;
-          const label = `${r.code} · ${r.city}`;
-          const w = 22 + label.length * 9.2;
+          const label = r.city;
+          const w = 30 + label.length * 9.4;
           const neighborRight = pins.some((o) => o !== r && o.pin![0] > x && o.pin![0] - x < 150 && Math.abs(o.pin![1] - y) < 70);
           const left = neighborRight;
           const lx = left ? x - 52 - w : x + 52;
@@ -374,7 +373,7 @@ function BrazilMap({ regionals, onHover }: { regionals: RegionalView[]; onHover:
               className="ci-pin"
               role="link"
               tabIndex={0}
-              aria-label={`Abrir regional ${r.code}, ${r.city}`}
+              aria-label={`Abrir regional ${r.city}`}
               onClick={() => router.push(dashboardHref(r.code))}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && router.push(dashboardHref(r.code))}
               onMouseEnter={() => onHover(r.code)}
