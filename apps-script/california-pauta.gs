@@ -10,22 +10,27 @@
  *   - Depois de publicar a dashboard, rode definirEnderecoDashboard() e crie os acionadores.
  */
 
-var GUIAS_EXTRAS = ['listas', 'visao geral'];
+var CI_PLANILHA_ID = '1Czltjygjb6NLeBpca4n05oZz-qfNWA0ciKPCx-eLxBY';
+var CI_GUIAS_EXTRAS = ['listas', 'visao geral'];
+
+function ciPlanilha_() {
+  return SpreadsheetApp.openById(CI_PLANILHA_ID);
+}
 
 /* ---------- 1. Configuração inicial ---------- */
 
 /** Gera e guarda os códigos secretos. Pode rodar de novo: não sobrescreve o que já existe. */
 function configurar() {
   var props = PropertiesService.getScriptProperties();
-  if (!props.getProperty('API_TOKEN')) props.setProperty('API_TOKEN', gerar_());
-  if (!props.getProperty('WEBHOOK_SECRET')) props.setProperty('WEBHOOK_SECRET', gerar_());
+  if (!props.getProperty('API_TOKEN')) props.setProperty('API_TOKEN', ciGerar_());
+  if (!props.getProperty('WEBHOOK_SECRET')) props.setProperty('WEBHOOK_SECRET', ciGerar_());
   // Lê a planilha uma vez para o Google pedir as autorizações agora.
-  SpreadsheetApp.getActiveSpreadsheet().getName();
+  ciPlanilha_().getName();
 
   console.log('Copie estes valores para as variáveis do Railway:');
   console.log('APPS_SCRIPT_TOKEN = ' + props.getProperty('API_TOKEN'));
   console.log('WEBHOOK_SECRET = ' + props.getProperty('WEBHOOK_SECRET'));
-  console.log('SESSION_SECRET = ' + gerar_());
+  console.log('SESSION_SECRET = ' + ciGerar_());
 }
 
 /** Edite o endereço entre aspas e rode esta função depois de publicar a dashboard. */
@@ -41,19 +46,19 @@ function definirEnderecoDashboard() {
 function doGet(e) {
   var esperado = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
   var recebido = (e && e.parameter && e.parameter.token) || '';
-  if (!esperado || esperado.length < 32 || !iguais_(recebido, esperado)) {
-    return json_({ ok: false, error: 'token inválido' });
+  if (!esperado || esperado.length < 32 || !ciIguais_(recebido, esperado)) {
+    return ciJson_({ ok: false, error: 'token inválido' });
   }
 
   var cache = CacheService.getScriptCache();
   var guardado = cache.get('ci-pauta');
   if (guardado) return ContentService.createTextOutput(guardado).setMimeType(ContentService.MimeType.JSON);
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = ciPlanilha_();
   var sheets = ss.getSheets()
     .filter(function (sh) {
       var nome = sh.getName();
-      return /\|/.test(nome) || GUIAS_EXTRAS.indexOf(chave_(nome)) >= 0;
+      return /\|/.test(nome) || CI_GUIAS_EXTRAS.indexOf(ciChave_(nome)) >= 0;
     })
     .map(function (sh) {
       return { title: sh.getName(), values: sh.getDataRange().getDisplayValues() };
@@ -90,18 +95,18 @@ function notificarDashboard() {
 
 /* ---------- utilitários ---------- */
 
-function gerar_() {
+function ciGerar_() {
   return (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
 }
-function chave_(s) {
+function ciChave_(s) {
   return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
-function iguais_(a, b) {
+function ciIguais_(a, b) {
   if (a.length !== b.length) return false;
   var r = 0;
   for (var i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
-function json_(obj) {
+function ciJson_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
