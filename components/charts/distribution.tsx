@@ -233,7 +233,7 @@ export function FormatsChart({ rows, ctx, className }: ChartProps) {
           <ul className="w-full space-y-1.5">
             {slices.map((s) => (
               <li key={s.name}>
-                <button onClick={() => drill(s.name)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[12.5px] hover:bg-ink-800">
+                <button onClick={() => drill(s.name)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[12.5px] hover:bg-white/[0.06]">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
                   <span className="min-w-0 flex-1 truncate text-paper-dim">{s.name}</span>
                   <span className="tabular-nums text-paper">{s.value}</span>
@@ -276,12 +276,12 @@ export function TopClients({ rows, ctx, className }: ChartProps) {
                 <li key={d.name}>
                   <button
                     onClick={() => ctx.drill({ title: d.name, subtitle: "Demandas do cliente", rows: rows.filter((r) => r.client === d.name), apply: { client: d.name } })}
-                    className="group grid w-full grid-cols-[22px_1fr_auto_44px] items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-ink-800"
+                    className="group grid w-full grid-cols-[22px_1fr_auto_44px] items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-white/[0.06]"
                   >
                     <span className="display text-[15px] text-paper-faint group-hover:text-clf-red">{String(i + 1).padStart(2, "0")}</span>
                     <span className="min-w-0">
                       <span className="block truncate text-[12.5px] text-paper-dim">{d.name}</span>
-                      <span className="mt-1 block h-1 rounded-full bg-ink-700">
+                      <span className="mt-1 block h-1 rounded-full bg-white/[0.08]">
                         <span className="block h-1 rounded-full bg-paper-dim transition-all duration-700" style={{ width: `${(d.value / max) * 100}%` }} />
                       </span>
                     </span>
@@ -397,7 +397,7 @@ export function FormatsByBu({ rows, ctx, className }: ChartProps) {
       table={{ columns: ["BU", "Formato", "Demandas"], rows: groups.flatMap((g) => g.formats.map((f) => [g.bu, f.name, f.value])) }}
     >
       {() => (
-        <ul className="divide-y divide-ink-700">
+        <ul className="divide-y divide-white/[0.08]">
           {groups.map((g) => (
             <li key={g.bu} className="py-2 first:pt-0">
               <div className="mb-1.5 flex items-center gap-2 text-[12.5px]">
@@ -410,7 +410,7 @@ export function FormatsByBu({ rows, ctx, className }: ChartProps) {
                   <button
                     key={f.name}
                     onClick={() => ctx.drill({ title: `${g.bu} · ${f.name}`, rows: rows.filter((d) => d.bu === g.bu && d.format === f.name), apply: { bu: g.bu, format: f.name } })}
-                    className="chip hover:border-ink-500 hover:text-paper"
+                    className="chip hover:border-white/25 hover:text-paper"
                   >
                     {f.name} <b className="tabular-nums text-paper">{f.value}</b>
                   </button>

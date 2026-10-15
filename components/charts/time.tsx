@@ -213,7 +213,7 @@ export function DeadlinesPanel({ rows, ctx, className }: ChartProps) {
       <li>
         <button
           onClick={() => ctx.drill({ title: d.task, subtitle: d.client, rows: [d] })}
-          className="grid w-full grid-cols-[1fr_auto] gap-2 rounded-md px-2 py-1.5 text-left hover:bg-ink-800"
+          className="grid w-full grid-cols-[1fr_auto] gap-2 rounded-md px-2 py-1.5 text-left hover:bg-white/[0.06]"
         >
           <span className="min-w-0">
             <span className="block truncate text-[12.5px] text-paper">{d.task}</span>
@@ -251,7 +251,7 @@ export function DeadlinesPanel({ rows, ctx, className }: ChartProps) {
                 { label: "Depois", value: later, color: C.dim },
                 { label: "Sem prazo", value: noDue, color: C.mute },
               ].map((s) => (
-                <div key={s.label} className="rounded-lg bg-ink-800 px-2.5 py-2">
+                <div key={s.label} className="rounded-lg bg-white/[0.06] px-2.5 py-2">
                   <div className="display text-[24px]" style={{ color: s.color }}>
                     {s.value}
                   </div>

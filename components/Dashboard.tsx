@@ -11,7 +11,7 @@ import { KpiGrid } from "./Kpis";
 import { Insights } from "./Insights";
 import { Drawer, downloadCsv } from "./Drawer";
 import { GlossaryModal, QualityModal } from "./Panels";
-import { Wordmark } from "./Wordmark";
+import { Backdrop } from "./Backdrop";
 import { BuChart, ClientsChart, FormatsByBu, FormatsChart, NatureChart, PriorityChart, TopClients } from "./charts/distribution";
 import { PeopleChart, StatusChart, WorkloadChart } from "./charts/operation";
 import { DeadlinesPanel, TimelineChart } from "./charts/time";
@@ -155,7 +155,8 @@ export default function Dashboard() {
   if (!data) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-ink px-6 text-center">
-        <Wordmark full className="text-[28px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/emblema-urso.png" alt="California" className="relative h-16 w-16" />
         {state === "error" ? (
           <div className="max-w-md space-y-3">
             <p className="flex items-center justify-center gap-2 text-clf-coral">
@@ -179,7 +180,8 @@ export default function Dashboard() {
   const half = "col-span-12 xl:col-span-6";
 
   return (
-    <div className="flex min-h-screen bg-ink">
+    <div className="relative flex min-h-screen bg-ink">
+      <Backdrop />
       {!presenting && (
         <Sidebar
           tabs={tabs}
@@ -205,28 +207,29 @@ export default function Dashboard() {
       <AnimatePresence>
         {mobileNav && (
           <motion.div className="fixed inset-0 z-50 bg-black/60 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileNav(false)}>
-            <motion.nav initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="h-full w-[270px] overflow-y-auto border-r border-ink-700 bg-ink-900 p-4" onClick={(e) => e.stopPropagation()}>
+            <motion.nav initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="h-full w-[270px] overflow-y-auto border-r border-white/[0.08] bg-[#121214]/80 backdrop-blur-2xl p-4" onClick={(e) => e.stopPropagation()}>
               <div className="mb-6 flex items-center justify-between">
-                <Wordmark className="text-[14px]" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/brand/logo-california-branco.png" alt="California" className="h-5 w-auto" />
                 <button onClick={() => setMobileNav(false)} aria-label="Fechar">
                   <X size={18} />
                 </button>
               </div>
-              <a href="/" className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-ink-800">
+              <a href="/" className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]">
                 Central
               </a>
-              <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-ink-800" onClick={() => navigate(null, null)}>
+              <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={() => navigate(null, null)}>
                 Visão Geral
               </button>
               {tabs.map((t) => (
-                <button key={t.title} className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-ink-800" onClick={() => navigate(t.regional, t.team)}>
+                <button key={t.title} className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => navigate(t.regional, t.team)}>
                   {t.title} <span className="text-paper-faint">({t.rows})</span>
                 </button>
               ))}
-              <button className="mt-4 block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-ink-800" onClick={() => setQuality(true)}>
+              <button className="mt-4 block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => setQuality(true)}>
                 Qualidade dos dados
               </button>
-              <button className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-ink-800" onClick={() => setGlossary(true)}>
+              <button className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => setGlossary(true)}>
                 Definições das métricas
               </button>
             </motion.nav>
@@ -234,7 +237,7 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
-      <div className="min-w-0 flex-1">
+      <div className="relative z-10 min-w-0 flex-1">
         <Topbar
           data={data}
           state={state}
@@ -326,7 +329,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-ink-700 pt-4 text-[11.5px] text-paper-faint">
+          <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-4 text-[11.5px] text-paper-faint">
             <span>
               Fonte: {data.spreadsheetTitle} · {data.tabs.length} guias · atualização automática a cada {data.refreshSeconds} s
             </span>

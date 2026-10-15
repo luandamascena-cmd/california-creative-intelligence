@@ -56,7 +56,7 @@ export function ProjectsByBu({ rows, ctx, className }: ChartProps) {
           ? "Projetos distintos (coluna PROJETO) associados a cada BU."
           : "Estimativa: sem coluna PROJETO, tarefas do mesmo cliente com o mesmo nome, ignorando versões (V2, V3) e idioma (ENG, Inglês), contam como um projeto. Passe o cursor para ver demandas por projeto."
       }
-      actions={!ctx.capabilities.hasProjectColumn ? <span className="mr-1 rounded border border-ink-600 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-paper-mute">Estimativa</span> : null}
+      actions={!ctx.capabilities.hasProjectColumn ? <span className="mr-1 rounded border border-white/[0.12] px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-paper-mute">Estimativa</span> : null}
       empty={!data.length && "Nenhuma demanda no filtro atual."}
       table={{ columns: ["BU", "Projetos", "Demandas"], rows: data.map((d) => [d.name, d.projects, d.demands]) }}
     >

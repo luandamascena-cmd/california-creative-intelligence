@@ -39,6 +39,35 @@ export function invalidateCache() {
   if (g.__ciCache) g.__ciCache.fetchedAt = 0;
 }
 
+const gx = globalThis as unknown as { __ciLastError?: { message: string; at: number } | null };
+gx.__ciLastError ??= null;
+
+/** Lê a planilha, guarda no cache e registra o resultado. Uma leitura por vez. */
+function refresh(): Promise<Dataset> {
+  if (!g.__ciInflight) {
+    const t0 = Date.now();
+    g.__ciInflight = build()
+      .then((data) => {
+        g.__ciCache = { data, fetchedAt: Date.now() };
+        gx.__ciLastError = null;
+        console.log(`[sync] ok em ${((Date.now() - t0) / 1000).toFixed(1)} s: ${data.demands.length} demandas, ${data.tabs.length} guias`);
+        return data;
+      })
+      .catch((e) => {
+        const message = e instanceof Error ? e.message : "Erro desconhecido ao ler a planilha.";
+        gx.__ciLastError = { message, at: Date.now() };
+        console.error(`[sync] falha após ${((Date.now() - t0) / 1000).toFixed(1)} s: ${message}`);
+        throw e;
+      })
+      .finally(() => (g.__ciInflight = null));
+  }
+  return g.__ciInflight;
+}
+
+/**
+ * Estratégia "mostra o que tem e atualiza por trás": quem abre a dashboard nunca espera
+ * a planilha responder, exceto na primeira leitura do servidor ou num pedido manual.
+ */
 export async function getDataset(force = false): Promise<DataResponse> {
   if (env.dataSource !== "demo" && sheetsAuthMode() === "none") {
     return {
@@ -49,17 +78,24 @@ export async function getDataset(force = false): Promise<DataResponse> {
   }
   const cache = g.__ciCache;
   const fresh = cache && Date.now() - cache.fetchedAt < env.cacheTtl * 1000;
-  if (cache && fresh && !force) return { ok: true, data: cache.data };
+  const staleInfo = () => {
+    const err = gx.__ciLastError;
+    // Só sinaliza problema se as falhas persistirem por mais de 3 minutos.
+    return err && cache && err.at > cache.fetchedAt && Date.now() - cache.fetchedAt > 180_000
+      ? { stale: true, error: err.message }
+      : {};
+  };
 
+  if (cache && !force) {
+    if (!fresh) refresh().catch(() => {});
+    return { ok: true, data: cache.data, ...staleInfo() };
+  }
   try {
-    g.__ciInflight ??= build().finally(() => (g.__ciInflight = null));
-    const data = await g.__ciInflight;
-    g.__ciCache = { data, fetchedAt: Date.now() };
+    const data = await refresh();
     return { ok: true, data };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erro desconhecido ao ler a planilha.";
-    console.error("[sync]", message);
-    if (cache) return { ok: true, data: cache.data, stale: true, error: message };
+    if (cache) return { ok: true, data: cache.data, ...staleInfo() };
     return { ok: false, error: message };
   }
 }

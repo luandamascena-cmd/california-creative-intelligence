@@ -18,11 +18,11 @@ function Modal({ open, title, onClose, children }: { open: boolean; title: strin
             exit={{ y: 8, opacity: 0 }}
             transition={{ duration: 0.25 }}
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[85vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-ink-700 bg-ink-900"
+            className="flex max-h-[85vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#121214]/80 backdrop-blur-2xl"
           >
-            <header className="flex items-center justify-between border-b border-ink-700 px-6 py-4">
+            <header className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4">
               <h2 className="display text-[22px] tracking-[0.06em]">{title}</h2>
-              <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-paper-mute hover:bg-ink-800 hover:text-paper">
+              <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-paper-mute hover:bg-white/[0.06] hover:text-paper">
                 <X size={18} />
               </button>
             </header>
@@ -49,9 +49,9 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
       <section className="mb-6">
         <h3 className="eyebrow mb-3">Conferência com a guia Visão Geral</h3>
         {recon.length ? (
-          <div className="overflow-hidden rounded-xl border border-ink-700">
+          <div className="overflow-hidden rounded-xl border border-white/[0.08]">
             <table className="w-full text-[12.5px]">
-              <thead className="bg-ink-800 text-left text-paper-mute">
+              <thead className="bg-white/[0.06] text-left text-paper-mute">
                 <tr>
                   <th className="px-3 py-2 font-medium">Time</th>
                   <th className="px-3 py-2 font-medium">Métrica</th>
@@ -62,7 +62,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
               </thead>
               <tbody>
                 {recon.map((r) => (
-                  <tr key={r.tab + r.metric} className="border-t border-ink-700">
+                  <tr key={r.tab + r.metric} className="border-t border-white/[0.08]">
                     <td className="px-3 py-1.5">{r.tab}</td>
                     <td className="px-3 py-1.5 text-paper-dim">{r.metric}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{r.sheet}</td>
@@ -84,7 +84,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
         <h3 className="eyebrow mb-3">Guias lidas</h3>
         <div className="grid gap-2 sm:grid-cols-2">
           {data.tabs.map((t) => (
-            <div key={t.title} className="flex items-center justify-between rounded-lg bg-ink-800 px-3 py-2 text-[12.5px]">
+            <div key={t.title} className="flex items-center justify-between rounded-lg bg-white/[0.06] px-3 py-2 text-[12.5px]">
               <span>
                 {t.title} <span className="text-paper-faint">· cabeçalho na linha {t.headerRow ?? "?"}</span>
               </span>
@@ -100,7 +100,7 @@ export function QualityModal({ data, open, onClose }: { data: Dataset; open: boo
             const s = SEV[i.severity];
             const Icon = s.icon;
             return (
-              <li key={n} className="flex gap-3 rounded-lg border border-ink-700 px-3 py-2.5 text-[12.5px]">
+              <li key={n} className="flex gap-3 rounded-lg border border-white/[0.08] px-3 py-2.5 text-[12.5px]">
                 <Icon size={15} className="mt-0.5 shrink-0" style={{ color: s.color }} aria-label={s.label} />
                 <span className="text-paper-dim">{i.message}</span>
               </li>

@@ -48,9 +48,9 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "tween", duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-ink-700 bg-ink-900 shadow-2xl"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-white/[0.08] bg-[#121214]/80 backdrop-blur-2xl shadow-2xl"
           >
-            <header className="border-b border-ink-700 px-5 pb-4 pt-5">
+            <header className="border-b border-white/[0.08] px-5 pb-4 pt-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   {req.subtitle && <p className="eyebrow mb-1">{req.subtitle}</p>}
@@ -59,7 +59,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                     {req.rows.length} {req.rows.length === 1 ? "demanda" : "demandas"} · {projects} {projects === 1 ? "projeto" : "projetos"} · {req.rows.filter((d) => d.isOpen).length} abertas
                   </p>
                 </div>
-                <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-paper-mute hover:bg-ink-800 hover:text-paper">
+                <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-paper-mute hover:bg-white/[0.06] hover:text-paper">
                   <X size={18} />
                 </button>
               </div>
@@ -78,7 +78,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                 </label>
               </div>
             </header>
-            <ul className="flex-1 divide-y divide-ink-700 overflow-y-auto">
+            <ul className="flex-1 divide-y divide-white/[0.08] overflow-y-auto">
               {rows.map((d) => {
                 const late = isLate(d, today);
                 return (

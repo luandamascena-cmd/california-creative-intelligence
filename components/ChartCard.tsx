@@ -34,17 +34,14 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className={`card flex min-w-0 flex-col p-4 sm:p-5 ${className}`}
+      className={`card flex min-w-0 flex-col p-5 sm:p-6 ${className}`}
       aria-labelledby={`${slug}-t`}
     >
       <header className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-[12px] tracking-[0.2em] text-clf-red">{code}</span>
-            <h2 id={`${slug}-t`} className="display truncate text-[17px] tracking-[0.06em] text-paper">
-              {title}
-            </h2>
-          </div>
+          <h2 id={`${slug}-t`} className="truncate text-[15px] font-semibold tracking-[-0.005em] text-paper">
+            {title}
+          </h2>
           {showDef && <p className="mt-2 max-w-prose text-[12px] leading-relaxed text-paper-mute">{definition}</p>}
         </div>
         <div className="no-print flex shrink-0 items-center gap-1">
@@ -64,18 +61,18 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
       </header>
       <div className="relative min-h-0 flex-1">
         {empty ? (
-          <div className="flex h-full min-h-[180px] items-center justify-center rounded-xl border border-dashed border-ink-600 px-6 text-center text-[13px] text-paper-mute">
+          <div className="flex h-full min-h-[180px] items-center justify-center rounded-xl border border-dashed border-white/[0.12] px-6 text-center text-[13px] text-paper-mute">
             {empty}
           </div>
         ) : showTable && table ? (
-          <div className="max-h-[340px] overflow-auto rounded-lg border border-ink-700">
+          <div className="max-h-[340px] overflow-auto rounded-xl border border-white/[0.08]">
             <table className="w-full text-left text-[12.5px]">
-              <thead className="sticky top-0 bg-ink-800 text-paper-mute">
+              <thead className="sticky top-0 bg-white/[0.06] text-paper-mute">
                 <tr>{table.columns.map((c) => <th key={c} className="px-3 py-2 font-medium">{c}</th>)}</tr>
               </thead>
               <tbody>
                 {table.rows.map((r, i) => (
-                  <tr key={i} className="border-t border-ink-700">
+                  <tr key={i} className="border-t border-white/[0.08]">
                     {r.map((c, j) => <td key={j} className={`px-3 py-1.5 ${typeof c === "number" ? "tabular-nums text-right" : ""}`}>{c}</td>)}
                   </tr>
                 ))}
@@ -98,7 +95,7 @@ export function IconBtn({ label, onClick, active, children }: { label: string; o
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
-      className={`flex h-7 w-7 items-center justify-center rounded-md transition ${active ? "bg-ink-700 text-paper" : "text-paper-mute hover:bg-ink-800 hover:text-paper"}`}
+      className={`flex h-7 w-7 items-center justify-center rounded-md transition ${active ? "bg-white/[0.08] text-paper" : "text-paper-mute hover:bg-white/[0.06] hover:text-paper"}`}
     >
       {children}
     </button>
@@ -107,7 +104,7 @@ export function IconBtn({ label, onClick, active, children }: { label: string; o
 
 export function Segmented<T extends string>({ value, options, onChange, label }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-md border border-ink-600 bg-ink-800 p-0.5">
+    <div role="radiogroup" aria-label={label} className="flex rounded-md border border-white/[0.12] bg-white/[0.06] p-0.5">
       {options.map((o) => (
         <button
           key={o.value}

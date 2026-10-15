@@ -76,7 +76,14 @@ const quote = (title: string) => `'${title.replace(/'/g, "''")}'`;
 async function fetchViaAppsScript(): Promise<{ title: string; sheets: RawSheet[] }> {
   const url = new URL(env.appsScriptUrl);
   url.searchParams.set("token", env.appsScriptToken);
-  const res = await fetchWithTimeout(url.toString(), { redirect: "follow" }, 25_000);
+  // O Apps Script pode demorar para "acordar"; uma nova tentativa cobre a maioria dos casos.
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(url.toString(), { redirect: "follow" }, 45_000);
+    if (res.status >= 500) throw new Error(`status ${res.status}`);
+  } catch {
+    res = await fetchWithTimeout(url.toString(), { redirect: "follow" }, 45_000);
+  }
   const text = await res.text();
   let json: { ok?: boolean; error?: string; title?: string; sheets?: RawSheet[] };
   try {

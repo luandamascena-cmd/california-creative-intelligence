@@ -230,7 +230,7 @@ export function StatusChart({ rows, ctx, className }: ChartProps) {
     >
       {(ref) => (
         <>
-          <div className="mb-1 flex h-2 w-full overflow-hidden rounded-full bg-ink-700" aria-hidden>
+          <div className="mb-1 flex h-2 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden>
             {data.map((d) => (
               <div key={d.name} className="h-full transition-all duration-700" style={{ width: `${(d.n / Math.max(total, 1)) * 100}%`, background: STATUS_COLORS[d.cat] }} />
             ))}

@@ -46,7 +46,7 @@ export function Topbar(p: Props) {
   }[p.state];
 
   return (
-    <header className="no-print sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-ink-700 bg-ink/85 px-4 backdrop-blur-md sm:px-6">
+    <header className="no-print sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-white/[0.08] bg-ink/85 px-4 backdrop-blur-md sm:px-6">
       <button className="rounded-md p-2 text-paper-mute hover:text-paper md:hidden" onClick={p.onMobileMenu} aria-label="Abrir navegação">
         <Menu size={18} />
       </button>
@@ -142,11 +142,11 @@ function GlobalSearch({ rows, onPick }: { rows: Demand[]; onPick: Props["onSearc
         onFocus={() => setOpen(true)}
         placeholder="Buscar cliente, projeto ou pessoa"
         aria-label="Busca global"
-        className="h-9 w-full rounded-lg border border-ink-600 bg-ink-850 pl-9 pr-12 text-[13px] text-paper outline-none placeholder:text-paper-faint focus:border-clf-red"
+        className="h-9 w-full rounded-lg border border-white/[0.12] bg-white/[0.03] pl-9 pr-12 text-[13px] text-paper outline-none placeholder:text-paper-faint focus:border-clf-red"
       />
-      <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-ink-600 px-1.5 text-[10px] text-paper-faint">⌘K</kbd>
+      <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-white/[0.12] px-1.5 text-[10px] text-paper-faint">⌘K</kbd>
       {open && res && (
-        <div className="absolute left-0 right-0 top-11 z-50 max-h-[420px] overflow-y-auto rounded-xl border border-ink-600 bg-ink-850 p-2 shadow-2xl">
+        <div className="absolute left-0 right-0 top-11 z-50 max-h-[420px] overflow-y-auto rounded-xl border border-white/[0.12] bg-white/[0.03] p-2 shadow-2xl">
           {empty && <p className="px-3 py-4 text-[12.5px] text-paper-mute">Nada encontrado.</p>}
           {!!res.clients.length && <Group title="Clientes">{res.clients.map((c) => <Opt key={c} onClick={() => pick("client", c)}>{c}</Opt>)}</Group>}
           {!!res.people.length && <Group title="Colaboradores">{res.people.map((c) => <Opt key={c} onClick={() => pick("person", c)}>{c}</Opt>)}</Group>}
@@ -171,7 +171,7 @@ const Group = ({ title, children }: { title: string; children: React.ReactNode }
   </div>
 );
 const Opt = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-  <button onClick={onClick} className="block w-full truncate rounded-md px-3 py-1.5 text-left text-[13px] text-paper-dim hover:bg-ink-800 hover:text-paper">
+  <button onClick={onClick} className="block w-full truncate rounded-md px-3 py-1.5 text-left text-[13px] text-paper-dim hover:bg-white/[0.06] hover:text-paper">
     {children}
   </button>
 );

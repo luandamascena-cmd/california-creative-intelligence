@@ -22,12 +22,12 @@ function KpiCard({ label, value, hint, tone = "default", badge, onClick, title }
     <Comp
       onClick={onClick}
       title={title}
-      className={`card group relative flex min-w-0 flex-col justify-between overflow-hidden p-4 text-left transition ${onClick ? "hover:border-ink-500" : ""}`}
+      className={`card group relative flex min-w-0 flex-col justify-between overflow-hidden p-4 text-left transition ${onClick ? "hover:border-white/25" : ""}`}
     >
       {tone === "alert" && value > 0 && <span className="absolute inset-x-0 top-0 h-[2px] bg-clf-red" />}
       <div className="flex items-center justify-between gap-2">
         <span className="eyebrow truncate">{label}</span>
-        {badge && <span className="rounded border border-ink-600 px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">{badge}</span>}
+        {badge && <span className="rounded border border-white/[0.12] px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">{badge}</span>}
       </div>
       <div className="display mt-3 text-[44px] sm:text-[52px]" style={{ color: tone === "alert" && value > 0 ? LATE : undefined }}>
         <AnimatedNumber value={value} />
@@ -95,7 +95,7 @@ export function KpiGrid({ k, caps, onStatus, onLate }: { k: Kpis; caps: Capabili
               <span className="display text-[20px] text-paper"><AnimatedNumber value={k.byCat[c]} /></span>
             </button>
           ))}
-        <span className="hidden h-6 w-px bg-ink-600 lg:block" />
+        <span className="hidden h-6 w-px bg-white/[0.12] lg:block" />
         <Stat label="Regionais ativas" value={k.regionals} />
         <Stat label="Times ativos" value={k.teams} />
         <Stat label="BUs ativas" value={k.bus} />

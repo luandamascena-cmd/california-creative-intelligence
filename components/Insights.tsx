@@ -73,14 +73,14 @@ export function Insights({ rows, today }: { rows: Demand[]; today: string }) {
 
   if (!items.length) return null;
   return (
-    <section aria-label="Leituras automáticas" className="card grid gap-px overflow-hidden p-0 md:grid-cols-2 2xl:grid-cols-4">
+    <section aria-label="Leituras automáticas" className="card grid overflow-hidden p-0 md:grid-cols-2 2xl:grid-cols-4">
       {items.map((it, i) => (
-        <div key={it.k} className="flex gap-3 bg-ink-850 px-4 py-3.5">
+        <div key={it.k} className="flex gap-3 border-b border-white/[0.06] px-5 py-4 md:border-r">
           <span className="display mt-0.5 text-[13px] text-clf-red">{String(i + 1).padStart(2, "0")}</span>
           <p className="text-[13px] leading-snug text-paper-dim [&_b]:font-semibold [&_b]:text-paper">{it.text}</p>
         </div>
       ))}
-      <div className="col-span-full flex items-center gap-1.5 border-t border-ink-700 bg-ink-850 px-4 py-1.5 text-[10.5px] text-paper-faint">
+      <div className="col-span-full flex items-center gap-1.5 px-5 py-2 text-[10.5px] text-paper-faint">
         <Sparkles size={11} /> Leituras calculadas automaticamente a partir dos dados do filtro. São fatos da planilha, não recomendações.
       </div>
     </section>

@@ -23,15 +23,15 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
 
   const item = (active: boolean) =>
     `group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[13px] transition ${
-      active ? "bg-ink-800 text-paper" : "text-paper-mute hover:bg-ink-850 hover:text-paper"
+      active ? "bg-white/[0.08] text-paper" : "text-paper-mute hover:bg-white/[0.04] hover:text-paper"
     }`;
 
   return (
     <aside
-      className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ink-700 bg-ink-900 transition-[width] duration-300 md:flex ${collapsed ? "w-[68px]" : "w-[248px]"}`}
+      className={`sticky top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-white/[0.08] bg-[#121214]/80 backdrop-blur-2xl transition-[width] duration-300 md:flex ${collapsed ? "w-[68px]" : "w-[248px]"}`}
       aria-label="Navegação"
     >
-      <Link href="/" title="Voltar à central" className={`flex h-[68px] items-center border-b border-ink-700 ${collapsed ? "justify-center" : "px-5"}`}>
+      <Link href="/" title="Voltar à central" className={`flex h-[68px] items-center border-b border-white/[0.08] ${collapsed ? "justify-center" : "px-5"}`}>
         {collapsed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src="/brand/emblema-urso.png" alt="California" className="h-8 w-8" />
@@ -81,7 +81,7 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
                     )}
                   </button>
                   {active && !collapsed && (
-                    <ul className="mb-1 ml-[22px] mt-0.5 space-y-0.5 border-l border-ink-700 pl-3">
+                    <ul className="mb-1 ml-[22px] mt-0.5 space-y-0.5 border-l border-white/[0.08] pl-3">
                       <li>
                         <button className={`w-full rounded-md px-2 py-1.5 text-left text-[12.5px] ${!team ? "text-paper" : "text-paper-mute hover:text-paper"}`} onClick={() => onNavigate(r, null)}>
                           Todos os times
@@ -90,7 +90,7 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
                       {teams.map((t) => (
                         <li key={t.title}>
                           <button
-                            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[12.5px] ${team === t.team ? "bg-ink-800 text-paper" : "text-paper-mute hover:text-paper"}`}
+                            className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[12.5px] ${team === t.team ? "bg-white/[0.06] text-paper" : "text-paper-mute hover:text-paper"}`}
                             onClick={() => onNavigate(r, t.team)}
                           >
                             <span>{t.team}</span>
@@ -122,7 +122,7 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
         </div>
       </nav>
 
-      <div className="space-y-1 border-t border-ink-700 p-3">
+      <div className="space-y-1 border-t border-white/[0.08] p-3">
         <button
           className={item(false)}
           onClick={async () => {
