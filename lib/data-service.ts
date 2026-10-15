@@ -50,7 +50,11 @@ function refresh(): Promise<Dataset> {
       .then((data) => {
         g.__ciCache = { data, fetchedAt: Date.now() };
         gx.__ciLastError = null;
-        console.log(`[sync] ok em ${((Date.now() - t0) / 1000).toFixed(1)} s: ${data.demands.length} demandas, ${data.tabs.length} guias`);
+        const flagged = data.issues.filter((i) => i.rows?.length);
+        console.log(
+          `[sync] ok em ${((Date.now() - t0) / 1000).toFixed(1)} s: ${data.demands.length} demandas, ${data.tabs.length} guias, ${flagged.length} divergências` +
+            (flagged.length ? ` | ${flagged.slice(0, 5).map((i) => i.message).join(" | ")}` : ""),
+        );
         return data;
       })
       .catch((e) => {
