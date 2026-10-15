@@ -73,16 +73,19 @@ export function Insights({ rows, today }: { rows: Demand[]; today: string }) {
 
   if (!items.length) return null;
   return (
-    <section aria-label="Leituras automáticas" className="card grid overflow-hidden p-0 md:grid-cols-2 2xl:grid-cols-4">
+    <section aria-labelledby="insights-t" className="card grid overflow-hidden p-0 md:grid-cols-2 2xl:grid-cols-4">
+      <header className="col-span-full flex items-center justify-between gap-3 px-5 pb-1 pt-5">
+        <h2 id="insights-t" className="text-[15px] font-semibold text-paper">Insights</h2>
+        <span className="hidden items-center gap-1.5 text-[11px] text-paper-faint sm:flex">
+          <Sparkles size={11} /> Calculados automaticamente a partir do filtro. São fatos da planilha, não recomendações.
+        </span>
+      </header>
       {items.map((it, i) => (
-        <div key={it.k} className="flex gap-3 border-b border-white/[0.06] px-5 py-4 md:border-r">
+        <div key={it.k} className="flex gap-3 border-white/[0.06] px-5 pb-5 pt-3 md:border-r md:last:border-r-0">
           <span className="display mt-0.5 text-[13px] text-clf-red">{String(i + 1).padStart(2, "0")}</span>
           <p className="text-[13px] leading-snug text-paper-dim [&_b]:font-semibold [&_b]:text-paper">{it.text}</p>
         </div>
       ))}
-      <div className="col-span-full flex items-center gap-1.5 px-5 py-2 text-[10.5px] text-paper-faint">
-        <Sparkles size={11} /> Leituras calculadas automaticamente a partir dos dados do filtro. São fatos da planilha, não recomendações.
-      </div>
     </section>
   );
 }

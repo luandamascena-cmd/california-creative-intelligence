@@ -1,6 +1,7 @@
 // Filtros e agregações. Toda a dashboard deriva de uma única base filtrada.
 
 import type { Demand, StatusCategory } from "./types";
+import type { PeriodKey } from "./period";
 import { addDaysISO, diffDays, todayISO } from "./text";
 import { regionalName, tabLabel } from "./labels";
 
@@ -14,9 +15,7 @@ export interface Filters {
   status: string | null;
   priority: string | null;
   projectType: string | null;
-  dateField: "start" | "due";
-  from: string | null;
-  to: string | null;
+  period: PeriodKey | null;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -29,9 +28,7 @@ export const EMPTY_FILTERS: Filters = {
   status: null,
   priority: null,
   projectType: null,
-  dateField: "start",
-  from: null,
-  to: null,
+  period: null,
 };
 
 /** Filtros que o usuário escolhe além do contexto de navegação (regional e time). */
@@ -48,12 +45,6 @@ export function applyFilters(rows: Demand[], f: Filters): Demand[] {
     if (f.status && d.status !== f.status) return false;
     if (f.priority && d.priority !== f.priority) return false;
     if (f.projectType && d.projectType !== f.projectType) return false;
-    if (f.from || f.to) {
-      const v = d[f.dateField];
-      if (!v) return false;
-      if (f.from && v < f.from) return false;
-      if (f.to && v > f.to) return false;
-    }
     return true;
   });
 }

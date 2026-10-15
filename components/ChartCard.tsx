@@ -5,6 +5,9 @@ import { Download, Info, Table2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { EChartHandle } from "./EChart";
 import { titleCase } from "@/lib/labels";
+import { PERIOD_OPTIONS, PERIOD_DEFINITION, periodDescription } from "@/lib/period";
+import { todayISO } from "@/lib/text";
+import { usePeriodScope, type ChartPeriod } from "./PeriodScope";
 
 export interface TableData {
   columns: string[];
@@ -38,14 +41,15 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
       className={`card flex min-w-0 flex-col p-5 sm:p-6 ${className}`}
       aria-labelledby={`${slug}-t`}
     >
-      <header className="mb-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 id={`${slug}-t`} className="truncate text-[15px] font-semibold tracking-[-0.005em] text-paper">
+      <header className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <div className="min-w-[150px] flex-1">
+          <h2 id={`${slug}-t`} className="text-[15px] font-semibold leading-snug tracking-[-0.005em] text-paper">
             {titleCase(title)}
           </h2>
           {showDef && <p className="mt-2 max-w-prose text-[12px] leading-relaxed text-paper-mute">{definition}</p>}
         </div>
-        <div className="no-print flex shrink-0 items-center gap-1">
+        <div className="no-print ml-auto flex shrink-0 items-center gap-1">
+          <PeriodSelect />
           {actions}
           <IconBtn label="Definição da métrica" active={showDef} onClick={() => setShowDef((v) => !v)}>
             <Info size={14} />
@@ -118,5 +122,38 @@ export function Segmented<T extends string>({ value, options, onChange, label }:
         </button>
       ))}
     </div>
+  );
+}
+
+/** Seletor de período do gráfico. Só aparece quando o gráfico está dentro de um PeriodScope. */
+function PeriodSelect() {
+  const scope = usePeriodScope();
+  if (!scope) return null;
+  const today = todayISO();
+  const globalLabel = scope.global ? `Geral: ${PERIOD_OPTIONS.find((p) => p.value === scope.global)?.label}` : "Todo o período";
+  const current = scope.value === "global" ? null : scope.value;
+  return (
+    <label className="mr-1">
+      <span className="sr-only">Período do gráfico</span>
+      <select
+        value={scope.value}
+        onChange={(e) => scope.onChange(e.target.value as ChartPeriod)}
+        title={current ? `Período: ${periodDescription(current, today)}. ${PERIOD_DEFINITION}` : `Segue o filtro geral de período. ${PERIOD_DEFINITION}`}
+        className={`h-7 appearance-none rounded-full border bg-white/[0.06] py-0 pl-2.5 pr-6 text-[11px] font-medium outline-none transition hover:border-white/25 ${current ? "border-clf-red/60 text-paper" : "border-white/[0.12] text-paper-mute"}`}
+        style={{
+          backgroundImage:
+            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238F8D88' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 8px center",
+        }}
+      >
+        <option value="global">{globalLabel}</option>
+        {PERIOD_OPTIONS.map((p) => (
+          <option key={p.value} value={p.value}>
+            {p.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

@@ -20,6 +20,8 @@ import { applyFilters, computeKpis, EMPTY_FILTERS, isLate, toCsv, CAT_LABEL, typ
 import { todayISO } from "@/lib/text";
 import { colorMap } from "./theme";
 import { regionalName, tabLabel } from "@/lib/labels";
+import { filterByPeriod } from "@/lib/period";
+import { PeriodScope } from "./PeriodScope";
 
 const STORE = "ci-filters-v1";
 const KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[];
@@ -31,7 +33,7 @@ function readFilters(): Filters {
   if (qs.has("visao")) return EMPTY_FILTERS;
   if ([...qs.keys()].some((k) => KEYS.includes(k as keyof Filters))) {
     const f = { ...EMPTY_FILTERS } as Record<string, string | null>;
-    KEYS.forEach((k) => (f[k] = qs.get(k) ?? (k === "dateField" ? "start" : null)));
+    KEYS.forEach((k) => (f[k] = qs.get(k)));
     return f as unknown as Filters;
   }
   try {
@@ -70,7 +72,7 @@ export default function Dashboard() {
     const qs = new URLSearchParams();
     KEYS.forEach((k) => {
       const v = filters[k];
-      if (v && !(k === "dateField" && v === "start")) qs.set(k, v);
+      if (v) qs.set(k, v);
     });
     const url = `${window.location.pathname}${qs.toString() ? "?" + qs : ""}`;
     window.history.replaceState(null, "", url);
@@ -100,9 +102,12 @@ export default function Dashboard() {
 
   const all = data?.demands ?? [];
   const tabs = data?.tabs ?? [];
-  const rows = useMemo(() => applyFilters(all, filters), [all, filters]);
-  /** Base sem regional/time: usada para comparar regionais e na matriz time × BU. */
-  const crossRows = useMemo(() => applyFilters(all, { ...filters, regional: null, team: null }), [all, filters]);
+  /** Base com todos os filtros, menos o período (cada gráfico pode escolher o seu). */
+  const baseRows = useMemo(() => applyFilters(all, filters), [all, filters]);
+  const rows = useMemo(() => filterByPeriod(baseRows, filters.period, today), [baseRows, filters.period, today]);
+  /** Base sem regional/time: usada para comparar regionais e na matriz de times. */
+  const crossBase = useMemo(() => applyFilters(all, { ...filters, regional: null, team: null }), [all, filters]);
+  const crossRows = useMemo(() => filterByPeriod(crossBase, filters.period, today), [crossBase, filters.period, today]);
   /** Base do contexto de navegação: alimenta as opções dos filtros. */
   const navRows = useMemo(() => applyFilters(all, { ...EMPTY_FILTERS, regional: filters.regional, team: filters.team }), [all, filters.regional, filters.team]);
   const kpis = useMemo(() => computeKpis(rows, today), [rows, today]);
@@ -274,7 +279,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} teams={teamsInRegional} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
+          {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} teams={teamsInRegional} today={today} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
 
           {!rows.length && (
             <div className="card px-6 py-10 text-center">
@@ -298,33 +303,33 @@ export default function Dashboard() {
 
           {ctx && !rows.length && (
             <div className="grid grid-cols-12 gap-4">
-              <RegionalChart rows={crossRows} ctx={ctx} className="col-span-12 lg:col-span-5" />
-              <HeatmapChart rows={crossRows} ctx={ctx} className="col-span-12 lg:col-span-7" />
+              <PeriodScope Chart={RegionalChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-5" />
+              <PeriodScope Chart={HeatmapChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-7" />
             </div>
           )}
 
           {ctx && rows.length > 0 && (
             <div className="grid grid-cols-12 gap-4">
-              <ClientsChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
-              <BuChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
-              <FormatsChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
+              <PeriodScope Chart={ClientsChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
+              <PeriodScope Chart={BuChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
+              <PeriodScope Chart={FormatsChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
 
               <TimelineChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-7" />
-              <StatusChart rows={rows} ctx={ctx} className="col-span-12 2xl:col-span-5" />
+              <PeriodScope Chart={StatusChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 2xl:col-span-5" />
 
-              <PeopleChart rows={rows} ctx={ctx} className={half} />
-              <WorkloadChart rows={rows} ctx={ctx} className={half} />
+              <PeriodScope Chart={PeopleChart} base={baseRows} ctx={ctx} global={filters.period} className={half} />
+              <PeriodScope Chart={WorkloadChart} base={baseRows} ctx={ctx} global={filters.period} className={half} />
 
-              <DeadlinesPanel rows={rows} ctx={ctx} className="col-span-12 2xl:col-span-8" />
-              <TopClients rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
+              <PeriodScope Chart={DeadlinesPanel} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 2xl:col-span-8" />
+              <PeriodScope Chart={TopClients} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
 
-              <RegionalChart rows={crossRows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
-              <ProjectsByBu rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
-              <HeatmapChart rows={crossRows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
+              <PeriodScope Chart={RegionalChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
+              <PeriodScope Chart={ProjectsByBu} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
+              <PeriodScope Chart={HeatmapChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
 
-              <NatureChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-12 2xl:col-span-6" />
-              <FormatsByBu rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
-              <PriorityChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
+              <PeriodScope Chart={NatureChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-12 2xl:col-span-6" />
+              <PeriodScope Chart={FormatsByBu} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
+              <PeriodScope Chart={PriorityChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
             </div>
           )}
 

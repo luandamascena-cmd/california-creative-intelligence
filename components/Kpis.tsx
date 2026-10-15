@@ -60,7 +60,7 @@ export function KpiGrid({ k, caps, onStatus, onLate }: { k: Kpis; caps: Capabili
           label="Projetos"
           value={k.projects}
           badge={caps.hasProjectColumn ? undefined : "estimativa"}
-          hint={k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} demandas por projeto` : "sem dados"}
+          hint={k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${k.demands === k.projects ? "demanda" : "demandas"} por projeto` : "sem dados"}
           title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente."
         />
         <KpiCard label="Clientes" value={k.clients} hint={`${k.externalClients} com trabalho de mercado`} title="Valores distintos da coluna CLIENTE" />

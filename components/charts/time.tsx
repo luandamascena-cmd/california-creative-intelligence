@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChartCard, Segmented } from "../ChartCard";
+import { ChartCard } from "../ChartCard";
 import { EChart } from "../EChart";
 import { C, LATE, SEQUENTIAL, STATUS_COLORS, axisLabel, splitLine, tooltipBase } from "../theme";
 import { isDueSoon, isLate } from "@/lib/analytics";
@@ -9,14 +9,49 @@ import { addDaysISO, diffDays, formatDateBR, monthLabel, weekStartISO } from "@/
 import type { Demand } from "@/lib/types";
 import type { ChartProps } from "./types";
 
-type Gran = "week" | "month";
-const bucketOf = (iso: string, g: Gran) => (g === "week" ? weekStartISO(iso) : iso.slice(0, 7));
+type Gran = "week" | "month" | "bimonth" | "quarter" | "semester" | "year";
+const GRANS: { value: Gran; label: string; months: number }[] = [
+  { value: "week", label: "Semana", months: 0 },
+  { value: "month", label: "Mês", months: 1 },
+  { value: "bimonth", label: "Bimestre", months: 2 },
+  { value: "quarter", label: "Trimestre", months: 3 },
+  { value: "semester", label: "Semestre", months: 6 },
+  { value: "year", label: "Ano", months: 12 },
+];
+const MONTH_ABBR = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const sizeOf = (g: Gran) => GRANS.find((x) => x.value === g)!.months;
+/** Chave do agrupamento: segunda-feira da semana, ou o primeiro mês do bloco (aaaa-mm). */
+const bucketOf = (iso: string, g: Gran) => {
+  if (g === "week") return weekStartISO(iso);
+  const size = sizeOf(g);
+  const y = iso.slice(0, 4);
+  const m = Number(iso.slice(5, 7));
+  return `${y}-${String(Math.floor((m - 1) / size) * size + 1).padStart(2, "0")}`;
+};
 const nextBucket = (b: string, g: Gran) => {
   if (g === "week") return addDaysISO(b, 7);
   const [y, m] = b.split("-").map(Number);
-  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+  const n = m + sizeOf(g);
+  return n > 12 ? `${y + 1}-${String(n - 12).padStart(2, "0")}` : `${y}-${String(n).padStart(2, "0")}`;
 };
-const bucketLabel = (b: string, g: Gran) => (g === "week" ? formatDateBR(b).slice(0, 5) : monthLabel(b));
+const bucketLabel = (b: string, g: Gran) => {
+  if (g === "week") return formatDateBR(b).slice(0, 5);
+  const [y, m] = b.split("-").map(Number);
+  const yy = String(y).slice(2);
+  switch (g) {
+    case "month":
+      return monthLabel(b);
+    case "bimonth":
+      return `${MONTH_ABBR[m - 1]}/${MONTH_ABBR[m]} ${yy}`;
+    case "quarter":
+      return `${Math.ceil(m / 3)}º tri ${yy}`;
+    case "semester":
+      return `${m <= 6 ? 1 : 2}º sem ${yy}`;
+    default:
+      return String(y);
+  }
+};
+const bucketTitle = (b: string, g: Gran) => (g === "week" ? `Semana de ${formatDateBR(b)}` : bucketLabel(b, g));
 
 /* 08 · Evolução no tempo */
 export function TimelineChart({ rows, ctx, className }: ChartProps) {
@@ -46,7 +81,7 @@ export function TimelineChart({ rows, ctx, className }: ChartProps) {
         axisPointer: { type: "line", lineStyle: { color: C.faint } },
         formatter: (ps: { dataIndex: number; seriesName: string; value: number; marker: string }[]) => {
           const b = buckets[ps[0].dataIndex];
-          const head = gran === "week" ? `Semana de ${formatDateBR(b)}` : monthLabel(b);
+          const head = bucketTitle(b, gran);
           return `<b>${head}</b><br/>` + ps.map((p) => `${p.marker}${p.seriesName}: ${p.value}`).join("<br/>");
         },
       },
@@ -105,20 +140,32 @@ export function TimelineChart({ rows, ctx, className }: ChartProps) {
       code="08"
       title="Evolução das Demandas"
       className={className}
-      definition="Entradas: demandas agrupadas pela data de INÍCIO. Entregas previstas: agrupadas pela data de ENTREGA (prazo planejado, não a data em que foi entregue, que a planilha não registra). Demandas sem data ficam fora deste gráfico."
+      definition="Agrupe por semana, mês, bimestre, trimestre, semestre ou ano. Entradas: demandas agrupadas pela data de INÍCIO. Entregas previstas: agrupadas pela data de ENTREGA (prazo planejado, não a data em que foi entregue, que a planilha não registra). Demandas sem data ficam fora deste gráfico."
       actions={
-        <Segmented
-          label="Agrupamento"
-          value={gran}
-          onChange={setGran}
-          options={[
-            { value: "week", label: "Semana" },
-            { value: "month", label: "Mês" },
-          ]}
-        />
+        <label className="mr-1">
+          <span className="sr-only">Agrupar por</span>
+          <select
+            value={gran}
+            onChange={(e) => setGran(e.target.value as Gran)}
+            title="Agrupar a linha do tempo por"
+            className="h-7 appearance-none rounded-full border border-white/[0.12] bg-white/[0.06] py-0 pl-2.5 pr-6 text-[11px] font-medium text-paper-dim outline-none transition hover:border-white/25"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238F8D88' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 8px center",
+            }}
+          >
+            {GRANS.map((g) => (
+              <option key={g.value} value={g.value}>
+                Por {g.label.toLowerCase()}
+              </option>
+            ))}
+          </select>
+        </label>
       }
       empty={!buckets.length && "As demandas filtradas não têm datas de início ou entrega."}
-      table={{ columns: [gran === "week" ? "Semana" : "Mês", "Entradas", "Entregas previstas"], rows: buckets.map((b, i) => [bucketLabel(b, gran), intake[i], due[i]]) }}
+      table={{ columns: [GRANS.find((g) => g.value === gran)!.label, "Entradas", "Entregas previstas"], rows: buckets.map((b, i) => [bucketLabel(b, gran), intake[i], due[i]]) }}
     >
       {(ref) => (
         <>
@@ -131,7 +178,7 @@ export function TimelineChart({ rows, ctx, className }: ChartProps) {
               const b = buckets[e.dataIndex];
               const byDue = (e.seriesName ?? "").startsWith("Entregas");
               ctx.drill({
-                title: `${byDue ? "Entregas previstas" : "Entradas"} · ${gran === "week" ? "semana de " + formatDateBR(b) : monthLabel(b)}`,
+                title: `${byDue ? "Entregas previstas" : "Entradas"} · ${bucketTitle(b, gran)}`,
                 rows: rows.filter((d) => {
                   const v = byDue ? d.due : d.start;
                   return v && bucketOf(v, gran) === b;
