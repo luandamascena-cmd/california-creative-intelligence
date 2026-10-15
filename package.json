@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "snapshot": "tsx scripts/build-snapshot.ts",
-    "check:data": "tsx scripts/check-data.ts"
+    "check:data": "tsx scripts/check-data.ts",
+    "map": "tsx scripts/build-map.ts"
   },
   "dependencies": {
     "@fontsource/antonio": "^5.1.0",
@@ -33,6 +34,13 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "tsx": "^4.19.0"
+    "@types/d3-delaunay": "^6.0.4",
+    "@types/d3-geo": "^3.1.1",
+    "@types/topojson-client": "^3.1.5",
+    "d3-delaunay": "^6.0.4",
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "tsx": "^4.19.0",
+    "world-atlas": "^2.0.2"
   }
 }

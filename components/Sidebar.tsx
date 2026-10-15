@@ -1,8 +1,8 @@
 "use client";
 
-import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, MapPin, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, ShieldCheck } from "lucide-react";
 import type { TabInfo } from "@/lib/types";
-import { Wordmark } from "./Wordmark";
 
 interface Props {
   tabs: TabInfo[];
@@ -31,19 +31,25 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
       className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-ink-700 bg-ink-900 transition-[width] duration-300 md:flex ${collapsed ? "w-[68px]" : "w-[248px]"}`}
       aria-label="Navegação"
     >
-      <div className={`flex h-[68px] items-center border-b border-ink-700 ${collapsed ? "justify-center" : "px-5"}`}>
+      <Link href="/" title="Voltar à central" className={`flex h-[68px] items-center border-b border-ink-700 ${collapsed ? "justify-center" : "px-5"}`}>
         {collapsed ? (
-          <span className="font-mark text-[20px] font-bold">C<span className="text-clf-red">.</span></span>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/brand/emblema-urso.png" alt="California" className="h-8 w-8" />
         ) : (
           <div>
-            <Wordmark className="text-[15px]" />
-            <p className="mt-1 font-display text-[11px] uppercase tracking-[0.3em] text-paper-mute">Creative Intelligence</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/logo-california-branco.png" alt="California" width={1549} height={369} className="h-[22px] w-auto" />
+            <p className="mt-1.5 font-display text-[11px] uppercase tracking-[0.3em] text-paper-mute">Creative Intelligence</p>
           </div>
         )}
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-        <div>
+        <div className="space-y-0.5">
+          <Link href="/" className={item(false)} title="Central">
+            <MapIcon size={16} className="shrink-0" />
+            {!collapsed && <span className="flex-1">Central</span>}
+          </Link>
           <button className={item(!regional)} onClick={() => onNavigate(null, null)} aria-current={!regional ? "page" : undefined} title="Visão Geral">
             {!regional && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
             <LayoutGrid size={16} className="shrink-0" />

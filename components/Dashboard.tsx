@@ -27,6 +27,8 @@ const KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[];
 function readFilters(): Filters {
   if (typeof window === "undefined") return EMPTY_FILTERS;
   const qs = new URLSearchParams(window.location.search);
+  // Vindo da central: "Visão Geral" sempre abre o consolidado, sem filtros antigos.
+  if (qs.has("visao")) return EMPTY_FILTERS;
   if ([...qs.keys()].some((k) => KEYS.includes(k as keyof Filters))) {
     const f = { ...EMPTY_FILTERS } as Record<string, string | null>;
     KEYS.forEach((k) => (f[k] = qs.get(k) ?? (k === "dateField" ? "start" : null)));
@@ -210,6 +212,9 @@ export default function Dashboard() {
                   <X size={18} />
                 </button>
               </div>
+              <a href="/" className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-ink-800">
+                Central
+              </a>
               <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-ink-800" onClick={() => navigate(null, null)}>
                 Visão Geral
               </button>
