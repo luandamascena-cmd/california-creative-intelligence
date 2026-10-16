@@ -31,6 +31,9 @@ Demandas, clientes, colaboradores, BUs, regionais e times ativos; distribuição
 
 Para tornar a contagem de projetos exata, basta criar a coluna `PROJETO` nas guias. A dashboard reconhece e passa a usá-la automaticamente.
 
+### Links
+A coluna `LINKS` de cada guia aparece no painel de detalhes de cada demanda, como botões que abrem em nova aba. O Apps Script lê os links embutidos no texto da célula (um ou vários por célula, ex.: "Briefing · Apresentação"). Só endereços `http` e `https` são exibidos. Na leitura pela conta de serviço do Google Cloud, apenas URLs digitadas por extenso na célula são reconhecidas.
+
 ### Qualidade dos dados
 Toda divergência aponta a guia (por extenso) e a linha da planilha, no formato `(guia São Paulo · Content House, linha 26)`. Alertas já verificados pelo time podem ser silenciados em `lib/quality-rules.ts` (ex.: demandas homônimas confirmadas como diferentes).
 

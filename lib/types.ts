@@ -8,6 +8,11 @@ export type StatusCategory =
   | "finalizado"
   | "outro";
 
+export interface DemandLink {
+  label: string;
+  url: string;
+}
+
 /** Um registro operacional (uma linha de uma guia de pauta). */
 export interface Demand {
   id: string;
@@ -37,6 +42,8 @@ export interface Demand {
   projectType: string;
   role: string;
   notes: string;
+  /** Links da coluna LINKS (apresentações, documentos, pastas). */
+  links: DemandLink[];
   projectKey: string;
   projectLabel: string;
   isOpen: boolean;

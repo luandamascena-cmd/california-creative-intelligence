@@ -166,6 +166,7 @@ export function toCsv(rows: Demand[]): string {
     ["Tipo de projeto", (d) => d.projectType],
     ["Função", (d) => d.role],
     ["Observações", (d) => d.notes],
+    ["Links", (d) => d.links.map((l) => `${l.label}: ${l.url}`).join(" | ")],
   ];
   const esc = (s: string) => (/[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
   return "﻿" + [cols.map((c) => c[0]).join(";"), ...rows.map((d) => cols.map((c) => esc(c[1](d))).join(";"))].join("\n");

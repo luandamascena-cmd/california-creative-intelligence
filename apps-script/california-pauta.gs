@@ -61,11 +61,12 @@ function doGet(e) {
       return /\|/.test(nome) || CI_GUIAS_EXTRAS.indexOf(ciChave_(nome)) >= 0;
     })
     .map(function (sh) {
-      return { title: sh.getName(), values: sh.getDataRange().getDisplayValues() };
+      var values = sh.getDataRange().getDisplayValues();
+      return { title: sh.getName(), values: values, links: ciLinks_(sh, values) };
     });
 
   var corpo = JSON.stringify({ ok: true, title: ss.getName(), sheets: sheets });
-  if (corpo.length < 90000) cache.put('ci-pauta', corpo, 15);
+  if (corpo.length < 95000) cache.put('ci-pauta', corpo, 15);
   return ContentService.createTextOutput(corpo).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -91,6 +92,44 @@ function notificarDashboard() {
   } catch (err) {
     console.warn('Falha ao avisar a dashboard: ' + err);
   }
+}
+
+/* ---------- links ---------- */
+
+/**
+ * Lê a coluna LINKS de uma guia de pauta e devolve as URLs de cada linha.
+ * Funciona com link na célula inteira e com vários links no mesmo texto ("Briefing · Apresentação").
+ * Resultado: { "26": [{ t: "Apresentação", u: "https://..." }], ... } com o número da linha da planilha.
+ */
+function ciLinks_(sh, values) {
+  var hRow = -1, col = -1;
+  for (var r = 0; r < Math.min(values.length, 15) && hRow < 0; r++) {
+    var keys = values[r].map(ciChave_);
+    if (keys.indexOf('tarefa') >= 0) {
+      hRow = r;
+      col = keys.indexOf('links');
+      if (col < 0) col = keys.indexOf('link');
+    }
+  }
+  if (hRow < 0 || col < 0 || values.length <= hRow + 1) return {};
+  var rich = sh.getRange(hRow + 2, col + 1, values.length - hRow - 1, 1).getRichTextValues();
+  var out = {};
+  rich.forEach(function (row, i) {
+    var rt = row[0];
+    if (!rt) return;
+    var items = [];
+    rt.getRuns().forEach(function (run) {
+      var url = run.getLinkUrl();
+      if (!url) return;
+      var label = run.getText().replace(/[·|]/g, ' ').replace(/\s+/g, ' ').trim();
+      var last = items[items.length - 1];
+      if (last && last.u === url) { last.t = (last.t + ' ' + label).trim(); return; }
+      items.push({ t: label, u: url });
+    });
+    if (!items.length && rt.getLinkUrl()) items.push({ t: rt.getText().trim(), u: rt.getLinkUrl() });
+    if (items.length) out[String(hRow + 2 + i)] = items;
+  });
+  return out;
 }
 
 /* ---------- utilitários ---------- */

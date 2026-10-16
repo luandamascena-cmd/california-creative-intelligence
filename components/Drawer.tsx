@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Download, Filter, Search, X } from "lucide-react";
+import { Download, ExternalLink, FileSpreadsheet, FileText, Film, Folder, LayoutDashboard, Link2, Presentation, Filter, Search, X } from "lucide-react";
+import type { DemandLink } from "@/lib/types";
 import type { DrillRequest } from "./charts/types";
 import { isLate, toCsv } from "@/lib/analytics";
 import { formatDateBR, normKey } from "@/lib/text";
@@ -31,10 +32,11 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
   const rows = useMemo(() => {
     if (!req) return [];
     const k = normKey(q);
-    const list = k ? req.rows.filter((d) => normKey([d.task, d.client, d.bu, d.people.join(" "), d.format].join(" ")).includes(k)) : req.rows;
+    const list = k ? req.rows.filter((d) => normKey([d.task, d.client, d.bu, d.people.join(" "), d.format, d.links.map((l) => l.label).join(" ")].join(" ")).includes(k)) : req.rows;
     return [...list].sort((a, b) => Number(b.isOpen) - Number(a.isOpen) || (a.due ?? "9").localeCompare(b.due ?? "9"));
   }, [req, q]);
   const projects = req ? new Set(req.rows.map((d) => d.projectKey)).size : 0;
+  const openCount = req ? req.rows.filter((d) => d.isOpen).length : 0;
 
   return (
     <AnimatePresence>
@@ -57,7 +59,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                   {req.subtitle && <p className="eyebrow mb-1">{req.subtitle}</p>}
                   <h2 className="display text-[26px] leading-tight text-paper">{req.title}</h2>
                   <p className="mt-1.5 text-[12.5px] text-paper-mute">
-                    {req.rows.length} {req.rows.length === 1 ? "demanda" : "demandas"} · {projects} {projects === 1 ? "projeto" : "projetos"} · {req.rows.filter((d) => d.isOpen).length} abertas
+                    {req.rows.length} {req.rows.length === 1 ? "demanda" : "demandas"} · {projects} {projects === 1 ? "projeto" : "projetos"} · {openCount} {openCount === 1 ? "aberta" : "abertas"}
                   </p>
                 </div>
                 <button onClick={onClose} aria-label="Fechar" className="rounded-md p-1.5 text-paper-mute hover:bg-white/[0.06] hover:text-paper">
@@ -91,6 +93,7 @@ export function Drawer({ req, today, onClose, onApply }: { req: DrillRequest | n
                         {d.status}
                       </span>
                     </div>
+                    {d.links.length > 0 && <LinkList links={d.links} />}
                     <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] sm:grid-cols-3">
                       <Field k="Cliente" v={d.client} />
                       <Field k="Business Unit" v={d.bu} />
@@ -125,6 +128,58 @@ function Field({ k, v, color, extra = "", wide }: { k: string; v: string; color?
         {v}
         {extra}
       </dd>
+    </div>
+  );
+}
+
+/** Ícone pelo tipo de destino do link. */
+function linkIcon(url: string) {
+  const u = url.toLowerCase();
+  if (u.includes("docs.google.com/presentation")) return Presentation;
+  if (u.includes("docs.google.com/spreadsheets")) return FileSpreadsheet;
+  if (u.includes("docs.google.com/document") || u.endsWith(".pdf") || u.includes(".pdf?")) return FileText;
+  if (u.includes("drive.google.com/drive/folders")) return Folder;
+  if (u.includes("youtube.com") || u.includes("youtu.be") || u.includes("vimeo.com")) return Film;
+  if (u.includes("miro.com") || u.includes("figma.com")) return LayoutDashboard;
+  return Link2;
+}
+
+function linkHost(url: string) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    if (h === "docs.google.com" || h === "drive.google.com") return "Google";
+    if (h.endsWith("monday.com")) return "Monday";
+    return h;
+  } catch {
+    return "";
+  }
+}
+
+/** Links da demanda: abrem em nova aba, sem repassar a origem. */
+function LinkList({ links }: { links: DemandLink[] }) {
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-[10.5px] uppercase tracking-wide text-paper-faint">Links</p>
+      <ul className="flex flex-wrap gap-1.5">
+        {links.map((l) => {
+          const Icon = linkIcon(l.url);
+          return (
+            <li key={l.url}>
+              <a
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`${l.label} · ${linkHost(l.url)}`}
+                className="group inline-flex max-w-[260px] items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.07] py-1 pl-2.5 pr-2 text-[12px] font-medium text-paper backdrop-blur-xl transition hover:border-white/30 hover:bg-white/[0.12]"
+              >
+                <Icon size={13} className="shrink-0 text-paper-dim group-hover:text-paper" aria-hidden />
+                <span className="truncate">{l.label}</span>
+                <ExternalLink size={11} className="shrink-0 text-paper-faint group-hover:text-paper-dim" aria-hidden />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

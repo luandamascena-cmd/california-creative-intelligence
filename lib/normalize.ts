@@ -4,6 +4,7 @@
 import type {
   Capabilities,
   Demand,
+  DemandLink,
   QualityIssue,
   Reconciliation,
   StatusCategory,
@@ -23,6 +24,20 @@ function where(tab: string, rows: number[]): string {
 export interface RawSheet {
   title: string;
   values: string[][];
+  /** Links por número de linha da planilha, enviados pelo Apps Script (texto + URL). */
+  links?: Record<string, { t: string; u: string }[]>;
+}
+
+const SAFE_URL = /^https?:\/\//i;
+
+/** Links da linha: os enviados pelo Apps Script ou, na falta deles, URLs digitadas na célula. */
+function rowLinks(sheet: RawSheet, rowNumber: number, cellText: string): DemandLink[] {
+  const fromScript = sheet.links?.[String(rowNumber)] ?? [];
+  const list = fromScript.length
+    ? fromScript.map((l) => ({ label: clean(l.t) || "Link", url: clean(l.u) }))
+    : (cellText.match(/https?:\/\/[^\s·|,]+/gi) ?? []).map((u) => ({ label: "Link", url: u }));
+  const seen = new Set<string>();
+  return list.filter((l) => SAFE_URL.test(l.url) && !seen.has(l.url) && seen.add(l.url));
 }
 
 /** Guias de pauta seguem o padrão "REGIONAL | TIME". */
@@ -46,7 +61,8 @@ type Field =
   | "role"
   | "notes"
   | "project"
-  | "completed";
+  | "completed"
+  | "links";
 
 const ALIASES: Record<Field, string[]> = {
   group: ["grupo"],
@@ -65,6 +81,7 @@ const ALIASES: Record<Field, string[]> = {
   notes: ["observacoes", "observacao", "obs"],
   project: ["projeto", "projeto pai", "id do projeto"],
   completed: ["conclusao", "data de conclusao", "finalizado em", "entregue em"],
+  links: ["links", "link", "arquivos", "materiais"],
 };
 
 const REQUIRED: Field[] = ["task", "client", "bu", "status", "start", "due", "planners", "artDirectors", "format"];
@@ -333,6 +350,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
         projectType: projectType || "(sem tipo)",
         role: get(raw, "role"),
         notes: get(raw, "notes"),
+        links: rowLinks(sheet, rowNumber, get(raw, "links")),
         projectKey,
         projectLabel: projectRaw || "",
         isOpen: cat !== "finalizado",
