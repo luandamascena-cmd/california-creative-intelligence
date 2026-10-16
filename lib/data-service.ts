@@ -52,7 +52,7 @@ function refresh(): Promise<Dataset> {
         gx.__ciLastError = null;
         const flagged = data.issues.filter((i) => i.rows?.length);
         console.log(
-          `[sync] ok em ${((Date.now() - t0) / 1000).toFixed(1)} s: ${data.demands.length} demandas, ${data.tabs.length} guias, ${flagged.length} divergências` +
+          `[sync] ok em ${((Date.now() - t0) / 1000).toFixed(1)} s: ${data.demands.length} demandas, ${data.tabs.length} guias, ${data.demands.filter((d) => d.links.length).length} com links, ${flagged.length} divergências` +
             (flagged.length ? ` | ${flagged.slice(0, 5).map((i) => i.message).join(" | ")}` : ""),
         );
         return data;
