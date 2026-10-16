@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, ShieldCheck } from "lucide-react";
 import type { TabInfo } from "@/lib/types";
 import { regionalName } from "@/lib/labels";
+import { REGIONAL_PLACES } from "@/lib/regions";
 
 interface Props {
   tabs: TabInfo[];
@@ -32,6 +33,15 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
       className={`sticky top-0 z-20 hidden h-screen shrink-0 flex-col border-r border-white/[0.08] bg-[#121214]/80 backdrop-blur-2xl transition-[width] duration-300 md:flex ${collapsed ? "w-[68px]" : "w-[248px]"}`}
       aria-label="Navegação"
     >
+      {/* Alça na borda: recolhe e expande o menu sem precisar descer até o rodapé. */}
+      <button
+        onClick={onToggle}
+        aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+        title={collapsed ? "Expandir menu" : "Recolher menu"}
+        className="absolute -right-3 top-[56px] z-30 flex h-6 w-6 items-center justify-center rounded-full border border-white/15 bg-[#1c1c1f]/90 text-paper-mute shadow-lg backdrop-blur-xl transition hover:border-white/30 hover:text-paper"
+      >
+        {collapsed ? <ChevronsRight size={13} /> : <ChevronsLeft size={13} />}
+      </button>
       <Link href="/" title="Voltar à central" className={`flex h-[68px] items-center border-b border-white/[0.08] ${collapsed ? "justify-center" : "px-5"}`}>
         {collapsed ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -73,7 +83,11 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
                 <li key={r}>
                   <button className={item(active && !team)} onClick={() => onNavigate(r, null)} aria-current={active ? "page" : undefined} title={regionalName(r)}>
                     {active && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
-                    {collapsed ? <span className="w-full text-center text-[11px] font-semibold">{regionalName(r).split(" ").map((w) => w[0]).join("")}</span> : <MapPin size={16} className="shrink-0" />}
+                    {collapsed ? (
+                      <span className="w-full text-center text-[11.5px] font-semibold tracking-wide">{REGIONAL_PLACES[r]?.short ?? r}</span>
+                    ) : (
+                      <MapPin size={16} className="shrink-0" />
+                    )}
                     {!collapsed && (
                       <>
                         <span className="flex-1">{regionalName(r)}</span>

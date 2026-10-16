@@ -8,7 +8,7 @@
     "start": "next start",
     "snapshot": "tsx scripts/build-snapshot.ts",
     "check:data": "tsx scripts/check-data.ts",
-    "map": "tsx scripts/build-map.ts"
+    "map": "tsx scripts/build-map.ts && tsx scripts/build-state-maps.ts"
   },
   "dependencies": {
     "@fontsource/antonio": "^5.1.0",

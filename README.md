@@ -128,7 +128,8 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 
 ## 7. Uso
 
-- **Navegação**: Visão Geral (todas as guias) ou regional; dentro da regional, filtro por time. Regionais e times vêm da planilha.
+- **Central**: mapa do Brasil com as regionais. Só o círculo do urso é clicável. Regionais com mais de um time (hoje São Paulo, Fortaleza e Salvador) abrem uma página própria, com o mapa do estado, a Visão Geral da regional, o termômetro por time e a escolha entre California e Content House. Regionais com um único time vão direto para a dashboard.
+- **Navegação**: Visão Geral (todas as guias) ou regional; dentro da regional, filtro por time. Regionais e times vêm da planilha. O menu lateral recolhe pela alça na borda (ou por Recolher) e mostra as siglas SP, RJ, FOR e SSA.
 - **Filtros combinados**: BU, cliente, colaborador, formato, status, prioridade, tipo de projeto e período (por INÍCIO ou ENTREGA). Ficam na URL, então um link compartilhado abre no mesmo recorte.
 - **Drill-down**: clique em qualquer barra, fatia, célula, ponto ou indicador para ver os registros, com origem (guia e linha). "Aplicar como filtro" leva o recorte para a dashboard inteira.
 - **Busca global**: `Ctrl/⌘ + K`.
@@ -141,6 +142,8 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 | Quero... | Onde |
 |---|---|
 | Adicionar um time | Duplique uma guia de pauta e renomeie no padrão `REGIONAL \| TIME`. Nada no código. |
+| Adicionar uma regional ao mapa | Sede, sigla e estado em `lib/regions.ts`; contorno do estado em `scripts/data/estados.geojson`; depois `npm run map`. |
+| Logo de um time novo | `TEAM_LOGOS` em `components/RegionHub.tsx` (arquivo em `public/brand/`). |
 | Mudar cores de status ou BU | `components/theme.ts` |
 | Ajustar regras de projeto, duplicata ou status | `lib/normalize.ts` |
 | Incluir um gráfico | `components/charts/` e a grade em `components/Dashboard.tsx` |
