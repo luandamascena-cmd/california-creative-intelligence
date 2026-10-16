@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, Info } from "lucide-react";
 import { useDataset } from "./useDataset";
-import { Backdrop } from "./Backdrop";
+import { CitySlideshow } from "./CitySlideshow";
 import { NetworkMap, type NetData } from "./NetworkMap";
 import { dashboardHref, HubHeader, HubLoading, Stat, ThermoRow } from "./hub-parts";
 import stateNetworks from "@/lib/state-networks.json";
@@ -93,7 +93,7 @@ export default function RegionHub({ code }: { code: string }) {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-ink">
-      <Backdrop />
+      <CitySlideshow photos={place?.photos ?? []} city={city} />
       <HubHeader state={state} error={error} back={{ href: "/", label: "Central" }} />
 
       <main className="relative z-10 mx-auto max-w-[1640px] px-5 pb-12 sm:px-10">
@@ -105,8 +105,8 @@ export default function RegionHub({ code }: { code: string }) {
         >
           <p className="text-[12px] font-semibold uppercase tracking-wide2 text-paper-mute">Regional</p>
           <h1 className="display mt-1 text-[44px] leading-[1.06] tracking-[0.02em] text-paper sm:text-[64px]">{city}</h1>
-          <p className="mx-auto mt-3 max-w-[560px] text-[14.5px] leading-relaxed text-paper-dim">
-            {city} opera com {tabs.length} times de criação. Escolha um deles para abrir a pauta ou veja os dois juntos na Visão Geral da regional.
+          <p className="mx-auto mt-3 text-[14.5px] leading-relaxed text-paper-dim sm:whitespace-nowrap">
+            Escolha uma das Business Units ou veja as duas juntas na Visão Geral da Regional.
           </p>
         </motion.div>
 
@@ -193,12 +193,10 @@ export default function RegionHub({ code }: { code: string }) {
                       label: city,
                       x: net.pin[0],
                       y: net.pin[1],
-                      ariaLabel: `Abrir a Visão Geral de ${city}`,
-                      onActivate: () => router.push(dashboardHref(code)),
+                      ariaLabel: city,
                     },
                   ]}
                 />
-                <p className="mt-2 text-center text-[11px] uppercase tracking-wide2 text-paper-faint">{place?.state}</p>
               </motion.div>
             ) : null}
           </section>

@@ -19,7 +19,8 @@ export interface MapPin {
   x: number;
   y: number;
   ariaLabel: string;
-  onActivate: () => void;
+  /** Sem ação, o pino é só indicativo (não clicável). */
+  onActivate?: () => void;
 }
 
 /** Pseudoaleatório estável por índice, para a animação não "pular" entre renderizações. */
@@ -108,19 +109,23 @@ export function NetworkMap({ net, pins, nodeColor, ariaLabel, onHover, className
           return (
             <g key={p.code} style={{ color: RED }} onMouseEnter={() => onHover?.(p.code)} onMouseLeave={() => onHover?.(null)}>
               <g
-                className="ci-pin"
-                role="link"
-                tabIndex={0}
-                aria-label={p.ariaLabel}
-                onClick={p.onActivate}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    p.onActivate();
-                  }
-                }}
+                {...(p.onActivate
+                  ? {
+                      className: "ci-pin",
+                      role: "link",
+                      tabIndex: 0,
+                      "aria-label": p.ariaLabel,
+                      onClick: p.onActivate,
+                      onKeyDown: (e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          p.onActivate?.();
+                        }
+                      },
+                    }
+                  : { "aria-hidden": true, pointerEvents: "none" })}
               >
-                <title>{p.ariaLabel}</title>
+                {p.onActivate && <title>{p.ariaLabel}</title>}
                 <circle cx={x} cy={y} r={46 * s} fill="#0B0B0C" opacity={0.8} />
                 {[44, 36, 29].map((rad, j) => (
                   <circle key={rad} cx={x} cy={y} r={rad * s} fill="none" stroke="currentColor" strokeOpacity={0.22 + j * 0.12} strokeWidth={1.5 * s} />
