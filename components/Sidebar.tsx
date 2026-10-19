@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, Rows3, ShieldCheck } from "lucide-react";
 import type { TabInfo } from "@/lib/types";
 import { regionalName } from "@/lib/labels";
 import { REGIONAL_PLACES } from "@/lib/regions";
@@ -12,13 +12,16 @@ interface Props {
   team: string | null;
   collapsed: boolean;
   alerts: number;
+  /** Panorama: página longa com todas as regionais e times. */
+  panorama: boolean;
+  onPanorama: () => void;
   onToggle: () => void;
   onNavigate: (regional: string | null, team: string | null) => void;
   onQuality: () => void;
   onGlossary: () => void;
 }
 
-export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onNavigate, onQuality, onGlossary }: Props) {
+export function Sidebar({ tabs, regional, team, collapsed, alerts, panorama, onPanorama, onToggle, onNavigate, onQuality, onGlossary }: Props) {
   const regionals = [...new Set(tabs.map((t) => t.regional))];
   const count = (r: string, tm?: string) => tabs.filter((t) => t.regional === r && (!tm || t.team === tm)).reduce((a, t) => a + t.rows, 0);
   const total = tabs.reduce((a, t) => a + t.rows, 0);
@@ -61,8 +64,8 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
             <MapIcon size={16} className="shrink-0" />
             {!collapsed && <span className="flex-1">Central</span>}
           </Link>
-          <button className={item(!regional)} onClick={() => onNavigate(null, null)} aria-current={!regional ? "page" : undefined} title="Visão Geral">
-            {!regional && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
+          <button className={item(!regional && !panorama)} onClick={() => onNavigate(null, null)} aria-current={!regional && !panorama ? "page" : undefined} title="Visão Geral">
+            {!regional && !panorama && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
             <LayoutGrid size={16} className="shrink-0" />
             {!collapsed && (
               <>
@@ -70,6 +73,11 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, onToggle, onN
                 <span className="text-[11px] tabular-nums text-paper-faint">{total}</span>
               </>
             )}
+          </button>
+          <button className={item(panorama)} onClick={onPanorama} aria-current={panorama ? "page" : undefined} title="Panorama: todas as regionais e times em uma página">
+            {panorama && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
+            <Rows3 size={16} className="shrink-0" />
+            {!collapsed && <span className="flex-1">Panorama</span>}
           </button>
         </div>
 

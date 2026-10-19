@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Muitas tentativas. Aguarde alguns minutos." }, { status: 429 });
   }
   const body = (await req.json().catch(() => ({}))) as { password?: string };
-  const ok = timingSafeEqual(digest(String(body.password ?? "")), digest(expected));
+  const given = digest(String(body.password ?? ""));
+  const admin = process.env.ADMIN_PASSWORD ?? "";
+  const isAdmin = admin.length >= 8 && timingSafeEqual(given, digest(admin));
+  const ok = isAdmin || timingSafeEqual(given, digest(expected));
   if (!ok) {
     const cur = a && a.until > Date.now() ? a : { count: 0, until: Date.now() + WINDOW };
     cur.count++;
@@ -31,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
   attempts.delete(ip);
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, await createSession(), {
+  res.cookies.set(SESSION_COOKIE, await createSession(isAdmin ? "admin" : "viewer"), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

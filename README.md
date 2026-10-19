@@ -112,7 +112,7 @@ Conferir os cálculos contra a Visão Geral do snapshot: `npm run check:data`.
 
 1. Suba esta pasta para um repositório no GitHub.
 2. No Railway: **New Project > Deploy from GitHub repo** e escolha o repositório. O Nixpacks detecta Next.js e usa `npm run build` e `npm start`; a porta vem da variável `PORT`, que o Railway define sozinho.
-3. Em **Variables**, cadastre: `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN`, `DASHBOARD_PASSWORD`, `SESSION_SECRET`, `WEBHOOK_SECRET` e, se quiser, `REFRESH_SECONDS` e `CACHE_TTL_SECONDS`.
+3. Em **Variables**, cadastre: `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN`, `DASHBOARD_PASSWORD`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `WEBHOOK_SECRET`, `LAYOUT_FILE=/data/layout.json` e, se quiser, `REFRESH_SECONDS` e `CACHE_TTL_SECONDS`. Crie um volume montado em `/data` para o layout sobreviver a novos deploys.
 4. Em **Settings > Networking**, gere um domínio público (ou conecte um domínio próprio).
 5. Acesse a URL e entre com `DASHBOARD_PASSWORD`.
 
@@ -129,6 +129,8 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 ## 7. Uso
 
 - **Central**: mapa do Brasil com as regionais. Só o círculo do urso é clicável. Regionais com mais de um time (hoje São Paulo, Fortaleza e Salvador) abrem uma página própria, com fotos da cidade desfocadas ao fundo, o mapa do estado (sem clique no urso), a Visão Geral da regional, o termômetro por time e a escolha entre California e Content House. Regionais com um único time vão direto para a dashboard.
+- **Panorama** (menu lateral ou central): página longa com o consolidado, a matriz comparativa de regionais e times e uma seção por regional, com cada time logo abaixo. Todas as seções usam o mesmo modelo de gráficos, para a comparação ser direta. Os gráficos de cada seção só são montados quando ela se aproxima da tela.
+- **Layout personalizado** (somente administrador): entre com `ADMIN_PASSWORD` e use Personalizar para arrastar, mudar a largura, trocar o tipo (barras, rosca, ranking, tabela), remover ou adicionar gráficos. "Salvar para todos" grava o layout no servidor (`LAYOUT_FILE`, no volume `/data` do Railway) e todos os acessos passam a ver a mesma arrumação. A dashboard e o Panorama têm layouts separados; "Restaurar padrão" volta à arrumação original.
 - **Navegação**: Visão Geral (todas as guias) ou regional; dentro da regional, filtro por time. Regionais e times vêm da planilha. O menu lateral recolhe pela alça na borda (ou por Recolher) e mostra as siglas SP, RJ, FOR e SSA.
 - **Filtros combinados**: BU, cliente, colaborador, formato, status, prioridade, tipo de projeto e período (por INÍCIO ou ENTREGA). Ficam na URL, então um link compartilhado abre no mesmo recorte.
 - **Drill-down**: clique em qualquer barra, fatia, célula, ponto ou indicador para ver os registros, com origem (guia e linha). "Aplicar como filtro" leva o recorte para a dashboard inteira.
@@ -149,3 +151,4 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 | Ajustar regras de projeto, duplicata ou status | `lib/normalize.ts` |
 | Incluir um gráfico | `components/charts/` e a grade em `components/Dashboard.tsx` |
 | Trocar a senha | Variável `DASHBOARD_PASSWORD` no Railway (reinicia sozinho) |
+| Trocar a senha de administrador | Variável `ADMIN_PASSWORD` no Railway |

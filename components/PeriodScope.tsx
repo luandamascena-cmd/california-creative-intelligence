@@ -18,7 +18,9 @@ export const PeriodContext = createContext<PeriodCtxValue | null>(null);
 export const usePeriodScope = () => useContext(PeriodContext);
 
 interface Props {
-  Chart: (p: ChartProps) => React.ReactNode;
+  Chart?: (p: ChartProps) => React.ReactNode;
+  /** Alternativa a Chart: desenha a partir das linhas já recortadas pelo período. */
+  render?: (rows: Demand[]) => React.ReactNode;
   /** Base já filtrada por tudo, menos o período. */
   base: Demand[];
   ctx: ChartCtx;
@@ -27,13 +29,13 @@ interface Props {
 }
 
 /** Envolve um gráfico com seu próprio seletor de período (padrão: segue o filtro geral). */
-export function PeriodScope({ Chart, base, ctx, global, className }: Props) {
+export function PeriodScope({ Chart, render, base, ctx, global, className }: Props) {
   const [value, setValue] = useState<ChartPeriod>("global");
   const effective = value === "global" ? global : value;
   const rows = useMemo(() => filterByPeriod(base, effective, ctx.today), [base, effective, ctx.today]);
   return (
     <PeriodContext.Provider value={{ value, onChange: setValue, global }}>
-      <Chart rows={rows} ctx={ctx} className={className} />
+      {render ? render(rows) : Chart ? <Chart rows={rows} ctx={ctx} className={className} /> : null}
     </PeriodContext.Provider>
   );
 }

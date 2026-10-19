@@ -121,6 +121,16 @@ export default function Hub() {
                   </span>
                 </span>
               </Link>
+              <Link
+                href="/dashboard?visao=panorama"
+                className="card group mt-3 flex items-center justify-between px-5 py-4 transition hover:border-white/25 hover:bg-white/[0.06]"
+              >
+                <span>
+                  <span className="block text-[14px] font-semibold text-paper">Panorama</span>
+                  <span className="block text-[12px] text-paper-mute">Todas as regionais e times em uma página</span>
+                </span>
+                <ArrowRight size={17} className="text-paper-dim transition group-hover:translate-x-1 group-hover:text-paper" />
+              </Link>
             </motion.div>
 
             <motion.section

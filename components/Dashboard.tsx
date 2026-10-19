@@ -11,10 +11,9 @@ import { KpiGrid } from "./Kpis";
 import { Insights } from "./Insights";
 import { Drawer, downloadCsv } from "./Drawer";
 import { GlossaryModal, QualityModal } from "./Panels";
-import { BuChart, ClientsChart, FormatsByBu, FormatsChart, NatureChart, PriorityChart, TopClients } from "./charts/distribution";
-import { PeopleChart, StatusChart, WorkloadChart } from "./charts/operation";
-import { DeadlinesPanel, TimelineChart } from "./charts/time";
-import { HeatmapChart, ProjectsByBu, RegionalChart } from "./charts/structure";
+import { HeatmapChart, RegionalChart } from "./charts/structure";
+import { EditBar, WidgetGrid, useLayoutEditor, useSharedLayout } from "./LayoutGrid";
+import { Panorama } from "./Panorama";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, computeKpis, EMPTY_FILTERS, isLate, toCsv, CAT_LABEL, type Filters } from "@/lib/analytics";
 import { todayISO } from "@/lib/text";
@@ -30,7 +29,7 @@ function readFilters(): Filters {
   if (typeof window === "undefined") return EMPTY_FILTERS;
   const qs = new URLSearchParams(window.location.search);
   // Vindo da central: "Visão Geral" sempre abre o consolidado, sem filtros antigos.
-  if (qs.has("visao")) return EMPTY_FILTERS;
+  if (qs.get("visao") === "geral") return EMPTY_FILTERS;
   if ([...qs.keys()].some((k) => KEYS.includes(k as keyof Filters))) {
     const f = { ...EMPTY_FILTERS } as Record<string, string | null>;
     KEYS.forEach((k) => (f[k] = qs.get(k)));
@@ -55,9 +54,14 @@ export default function Dashboard() {
   const [quality, setQuality] = useState(false);
   const [glossary, setGlossary] = useState(false);
   const [today, setToday] = useState(todayISO());
+  const [view, setView] = useState<"dashboard" | "panorama">("dashboard");
+  const shared = useSharedLayout();
+  const dashEditor = useLayoutEditor("dashboard", shared);
+  const panoEditor = useLayoutEditor("panorama", shared);
 
   useEffect(() => {
     setFilters(readFilters());
+    if (new URLSearchParams(window.location.search).get("visao") === "panorama") setView("panorama");
     try {
       setCollapsed(localStorage.getItem("ci-collapsed") === "1");
     } catch {}
@@ -70,6 +74,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!ready) return;
     const qs = new URLSearchParams();
+    if (view === "panorama") qs.set("visao", "panorama");
     KEYS.forEach((k) => {
       const v = filters[k];
       if (v) qs.set(k, v);
@@ -79,7 +84,7 @@ export default function Dashboard() {
     try {
       localStorage.setItem(STORE, JSON.stringify(filters));
     } catch {}
-  }, [filters, ready]);
+  }, [filters, ready, view]);
 
   // Filtros que apontam para valores que deixaram de existir na planilha são descartados.
   useEffect(() => {
@@ -93,9 +98,16 @@ export default function Dashboard() {
     });
   }, [data]);
 
+  const openPanorama = useCallback(() => {
+    setFilters((f) => ({ ...f, regional: null, team: null }));
+    setView("panorama");
+    setMobileNav(false);
+    window.scrollTo({ top: 0 });
+  }, []);
   const update = useCallback((patch: Partial<Filters>) => setFilters((f) => ({ ...f, ...patch })), []);
   const navigate = useCallback((regional: string | null, team: string | null) => {
     setFilters((f) => ({ ...f, regional, team }));
+    setView("dashboard");
     setMobileNav(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
@@ -123,7 +135,7 @@ export default function Dashboard() {
     ? { today, buColors, buOrder, tabs, filters, capabilities: data.capabilities, drill: setDrill, navigate }
     : null;
 
-  const context = filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
+  const context = view === "panorama" ? "Panorama" : filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
   const contextTabs = tabs.filter((t) => (!filters.regional || t.regional === filters.regional) && (!filters.team || t.team === filters.team));
   const emptyContext = !!filters.regional && !navRows.length;
   const teamsInRegional = tabs.filter((t) => t.regional === filters.regional).map((t) => t.team);
@@ -189,8 +201,10 @@ export default function Dashboard() {
       {!presenting && (
         <Sidebar
           tabs={tabs}
-          regional={filters.regional}
+          regional={view === "panorama" ? null : filters.regional}
           team={filters.team}
+          panorama={view === "panorama"}
+          onPanorama={openPanorama}
           collapsed={collapsed}
           alerts={alerts}
           onToggle={() => {
@@ -224,6 +238,9 @@ export default function Dashboard() {
               </a>
               <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={() => navigate(null, null)}>
                 Visão Geral
+              </button>
+              <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={openPanorama}>
+                Panorama
               </button>
               {tabs.map((t) => (
                 <button key={t.title} className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => navigate(t.regional, t.team)}>
@@ -281,6 +298,19 @@ export default function Dashboard() {
 
           {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} teams={teamsInRegional} today={today} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
 
+          {view === "panorama" && ctx ? (
+            <Panorama
+              data={data}
+              filters={filters}
+              today={today}
+              ctx={ctx}
+              editor={panoEditor}
+              canEdit={shared.canEdit && !presenting}
+              onDrill={setDrill}
+              onOpen={(r, t) => navigate(r, t)}
+            />
+          ) : (
+            <>
           {!rows.length && (
             <div className="card px-6 py-10 text-center">
               <p className="display text-[24px]">{emptyContext ? "Pauta ainda sem registros" : "Sem demandas neste recorte"}</p>
@@ -309,28 +339,26 @@ export default function Dashboard() {
           )}
 
           {ctx && rows.length > 0 && (
-            <div className="grid grid-cols-12 gap-4">
-              <PeriodScope Chart={ClientsChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
-              <PeriodScope Chart={BuChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
-              <PeriodScope Chart={FormatsChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
-
-              <TimelineChart rows={rows} ctx={ctx} className="col-span-12 lg:col-span-6 2xl:col-span-7" />
-              <PeriodScope Chart={StatusChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 2xl:col-span-5" />
-
-              <PeriodScope Chart={PeopleChart} base={baseRows} ctx={ctx} global={filters.period} className={half} />
-              <PeriodScope Chart={WorkloadChart} base={baseRows} ctx={ctx} global={filters.period} className={half} />
-
-              <PeriodScope Chart={DeadlinesPanel} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 2xl:col-span-8" />
-              <PeriodScope Chart={TopClients} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
-
-              <PeriodScope Chart={RegionalChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
-              <PeriodScope Chart={ProjectsByBu} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-4" />
-              <PeriodScope Chart={HeatmapChart} base={crossBase} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-5" />
-
-              <PeriodScope Chart={NatureChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-12 2xl:col-span-6" />
-              <PeriodScope Chart={FormatsByBu} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
-              <PeriodScope Chart={PriorityChart} base={baseRows} ctx={ctx} global={filters.period} className="col-span-12 lg:col-span-6 2xl:col-span-3" />
+            <div className="space-y-3">
+              {!presenting && (
+                <EditBar
+                  canEdit={shared.canEdit}
+                  editing={dashEditor.editing}
+                  dirty={dashEditor.dirty}
+                  scopeLabel="a dashboard"
+                  current={dashEditor.current}
+                  onStart={dashEditor.start}
+                  onCancel={dashEditor.cancel}
+                  onReset={dashEditor.reset}
+                  onAdd={dashEditor.add}
+                  onSave={dashEditor.save}
+                />
+              )}
+              <WidgetGrid widgets={dashEditor.current} editing={dashEditor.editing} onChange={dashEditor.setDraft} bases={{ base: baseRows, cross: crossBase, ctx, global: filters.period }} />
             </div>
+          )}
+
+            </>
           )}
 
           <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-4 text-[11.5px] text-paper-faint">
