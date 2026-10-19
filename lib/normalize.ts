@@ -12,7 +12,7 @@ import type {
 } from "./types";
 import { addDaysISO, clean, normKey, parseDate, splitPeople, todayISO } from "./text";
 import { tabLabel } from "./labels";
-import { CONFIRMED_DISTINCT } from "./quality-rules";
+import { CONFIRMED_DISTINCT, isOutsideCreativeTeam } from "./quality-rules";
 
 /** Localização padrão de toda divergência: guia (por extenso) e linha da planilha. */
 function where(tab: string, rows: number[]): string {
@@ -178,6 +178,8 @@ export interface NormalizeResult {
 
 export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): NormalizeResult {
   const issues: QualityIssue[] = [];
+  /** Demandas cujos únicos responsáveis estão fora da equipe de criação: não contam como "sem responsável". */
+  const onlyOutside = new Set<string>();
   const tabs: TabInfo[] = [];
   const demands: Demand[] = [];
 
@@ -285,13 +287,13 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
       const format = canon(dicts.format, get(raw, "format"), "Formato", sheet.title, rowNumber);
       const priority = canon(dicts.priority, get(raw, "priority"), "Prioridade", sheet.title, rowNumber);
       const projectType = canon(dicts.projectType, get(raw, "projectType"), "Tipo de projeto", sheet.title, rowNumber);
-      const planners = splitPeople(get(raw, "planners")).map((p) =>
-        canon(dicts.person, p, "Pessoa", sheet.title, rowNumber),
-      );
-      const artDirectors = splitPeople(get(raw, "artDirectors")).map((p) =>
-        canon(dicts.person, p, "Pessoa", sheet.title, rowNumber),
-      );
+      // Quem não é da equipe de criação sai das contagens (lib/quality-rules.ts).
+      const plannersAll = splitPeople(get(raw, "planners")).map((p) => canon(dicts.person, p, "Pessoa", sheet.title, rowNumber));
+      const artAll = splitPeople(get(raw, "artDirectors")).map((p) => canon(dicts.person, p, "Pessoa", sheet.title, rowNumber));
+      const planners = plannersAll.filter((p) => !isOutsideCreativeTeam(p));
+      const artDirectors = artAll.filter((p) => !isOutsideCreativeTeam(p));
       const people = Array.from(new Set([...planners, ...artDirectors]));
+      if (!people.length && plannersAll.length + artAll.length > 0) onlyOutside.add(`${sheet.title}#${rowNumber}`);
 
       const startP = parseDate(get(raw, "start"));
       const dueP = parseDate(get(raw, "due"));
@@ -451,7 +453,7 @@ export function normalizeWorkbook(sheets: RawSheet[], now: Date = new Date()): N
     (d) => d.isOpen && !d.due && d.statusCategory !== "travado" && d.statusCategory !== "briefing",
     (d) => `"${d.task}" está aberta e em produção, mas sem data de ENTREGA`,
   );
-  perRow("sem-responsavel", "alerta", (d) => d.people.length === 0, (d) => `"${d.task}" está sem responsável em PLANEJAMENTO ou DIRETOR DE ARTE`);
+  perRow("sem-responsavel", "alerta", (d) => d.people.length === 0 && !onlyOutside.has(d.id), (d) => `"${d.task}" está sem responsável em PLANEJAMENTO ou DIRETOR DE ARTE`);
   perRow("sem-prioridade", "info", (d) => d.priority === "(sem prioridade)", (d) => `"${d.task}" está sem PRIORIDADE`);
   perRow(
     "finalizada-sem-data",

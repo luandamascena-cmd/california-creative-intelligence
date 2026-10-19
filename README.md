@@ -35,7 +35,7 @@ Para tornar a contagem de projetos exata, basta criar a coluna `PROJETO` nas gui
 A coluna `LINKS` de cada guia aparece no painel de detalhes de cada demanda, como botões que abrem em nova aba. O Apps Script lê os links embutidos no texto da célula (um ou vários por célula, ex.: "Briefing · Apresentação"). Só endereços `http` e `https` são exibidos. Na leitura pela conta de serviço do Google Cloud, apenas URLs digitadas por extenso na célula são reconhecidas.
 
 ### Qualidade dos dados
-Toda divergência aponta a guia (por extenso) e a linha da planilha, no formato `(guia São Paulo · Content House, linha 26)`. Alertas já verificados pelo time podem ser silenciados em `lib/quality-rules.ts` (ex.: demandas homônimas confirmadas como diferentes).
+Toda divergência aponta a guia (por extenso) e a linha da planilha, no formato `(guia São Paulo · Content House, linha 26)`. Alertas já verificados pelo time podem ser silenciados em `lib/quality-rules.ts` (ex.: demandas homônimas confirmadas como diferentes). No mesmo arquivo, `NOT_CREATIVE_TEAM` lista quem aparece na pauta mas não é da equipe de criação (hoje Louis Millard e Carolina Barakat): essas pessoas ficam fora de todas as contagens.
 
 ### Conferência
 Os números são conferidos a cada sincronização contra o quadro **Por time** da guia Visão Geral (Tarefas, Ativas, Atrasadas, Em 7 dias). O resultado aparece em **Qualidade dos dados**. No snapshot de 14/10/2026, todos os valores batem: 94 tarefas, 23 ativas, 6 atrasadas, 3 em 7 dias.
