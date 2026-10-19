@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Headline } from "./Kpis";
-import { EditBar, WidgetGrid, type useLayoutEditor } from "./LayoutGrid";
+import { WidgetGrid } from "./LayoutGrid";
+import type { Widget } from "@/lib/layout";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, CAT_LABEL, computeKpis, isLate, type Filters } from "@/lib/analytics";
 import { filterByPeriod } from "@/lib/period";
@@ -17,7 +18,8 @@ interface Props {
   filters: Filters;
   today: string;
   ctx: ChartCtx;
-  editor: ReturnType<typeof useLayoutEditor>;
+  /** Mesmo layout da dashboard: cada seção replica o que se vê na dashboard daquele recorte. */
+  widgets: Widget[];
   canEdit: boolean;
   onDrill: (r: DrillRequest) => void;
   onOpen: (regional: string, team: string | null) => void;
@@ -38,8 +40,11 @@ interface Unit {
   tabs: TabInfo[];
 }
 
-/** Página longa: consolidado, matriz comparativa e cada regional com seus times, sempre com o mesmo modelo de gráficos. */
-export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, onOpen }: Props) {
+/**
+ * Página longa que replica, em sequência, o que se vê na dashboard de cada recorte:
+ * o consolidado (igual à Visão Geral), o comparativo e, em cada regional, a dashboard de cada time.
+ */
+export function Panorama({ data, filters, today, ctx, widgets, canEdit, onDrill, onOpen }: Props) {
   const scope = useMemo(() => ({ ...filters, regional: null, team: null }), [filters]);
   const all = data.demands;
   const consolidatedBase = useMemo(() => applyFilters(all, scope), [all, scope]);
@@ -56,7 +61,7 @@ export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, 
   const active = useScrollSpy(sections.map((s) => s.id));
 
   const consolidatedCtx = { ...ctx, filters: scope };
-  const widgets = editor.current;
+  const statusDrill = (rows: Demand[]) => (status: string) => onDrill({ title: status, subtitle: "Demandas por status", rows: rows.filter((d) => d.status === status), apply: { status } });
 
   return (
     <div className="space-y-10">
@@ -81,42 +86,22 @@ export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, 
         </ul>
       </nav>
 
-      {/* Consolidado */}
+      {/* Consolidado: o mesmo que a Visão Geral */}
       <section id="consolidado" className="scroll-mt-[130px] space-y-4">
-        <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
-        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} />
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
+          {canEdit && <span className="text-[11.5px] text-paper-faint">Os gráficos seguem o layout da dashboard. Para mudar, use Personalizar na Visão Geral.</span>}
+        </div>
+        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} onStatus={statusDrill(consolidated)} />
+        <LazyMount estimate={estimateHeight(widgets)}>
+          <WidgetGrid widgets={widgets} editing={false} onChange={() => {}} bases={{ base: consolidatedBase, cross: consolidatedBase, ctx: consolidatedCtx, global: filters.period }} />
+        </LazyMount>
       </section>
 
       {/* Matriz comparativa */}
-      <section id="matriz" className="scroll-mt-[130px] space-y-4">
+      <section id="matriz" className="scroll-mt-[130px] space-y-4 border-t border-white/[0.08] pt-8">
         <SectionTitle eyebrow="Quem está mais pressionado" title="Comparativo entre Regionais e Times" />
         <Matrix units={units} base={consolidated} today={today} onJump={jumpTo} />
-      </section>
-
-      {/* Modelo de gráficos, editável aqui e replicado nas seções abaixo */}
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <SectionTitle eyebrow="Todas as regionais e times" title="Gráficos do Consolidado" />
-        </div>
-        <EditBar
-          stickyTop="top-[128px]"
-          canEdit={canEdit}
-          editing={editor.editing}
-          dirty={editor.dirty}
-          scopeLabel="o Panorama"
-          hint="Edite aqui. Regionais e times abaixo seguem o mesmo modelo, para a comparação continuar direta."
-          current={widgets}
-          onStart={editor.start}
-          onCancel={editor.cancel}
-          onReset={editor.reset}
-          onAdd={editor.add}
-          onSave={editor.save}
-        />
-        {widgets.length > 0 ? (
-          <WidgetGrid widgets={widgets} editing={editor.editing} onChange={editor.setDraft} bases={{ base: consolidatedBase, cross: consolidatedBase, ctx: consolidatedCtx, global: filters.period }} />
-        ) : (
-          <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">O modelo do Panorama está sem gráficos. {canEdit ? "Use Adicionar gráfico." : ""}</p>
-        )}
       </section>
 
       {/* Regionais */}
@@ -136,7 +121,8 @@ export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, 
               <TeamBlock
                 key={t.title}
                 tab={t}
-                showHeader={multi}
+                caps={data.capabilities}
+                onStatus={(rows) => statusDrill(rows)}
                 widgets={widgets}
                 all={all}
                 scope={scope}
@@ -165,8 +151,9 @@ function SectionTitle({ eyebrow, title, big }: { eyebrow: string; title: string;
 
 function TeamBlock(p: {
   tab: TabInfo;
-  showHeader: boolean;
-  widgets: ReturnType<typeof useLayoutEditor>["current"];
+  caps: Dataset["capabilities"];
+  onStatus: (rows: Demand[]) => (status: string) => void;
+  widgets: Widget[];
   all: Demand[];
   scope: Filters;
   filters: Filters;
@@ -179,25 +166,23 @@ function TeamBlock(p: {
   const teamFilters = useMemo(() => ({ ...p.scope, regional: tab.regional, team: tab.team }), [p.scope, tab.regional, tab.team]);
   const base = useMemo(() => applyFilters(p.all, teamFilters), [p.all, teamFilters]);
   const rows = useMemo(() => filterByPeriod(base, p.filters.period, p.today), [base, p.filters.period, p.today]);
+  const kpis = useMemo(() => computeKpis(rows, p.today), [rows, p.today]);
   const logo = TEAM_LOGOS[teamKey(tab.team)];
   return (
-    <div id={sectionId(tab.regional, tab.team)} className="scroll-mt-[130px] space-y-4">
-      {p.showHeader && (
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <div className="flex h-[34px] items-center">
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logo.src} alt={tab.team} width={logo.w} height={logo.h} className={`${logo.className} w-auto`} />
-            ) : (
-              <span className="display text-[26px] text-paper">{tab.team}</span>
-            )}
-          </div>
-          <button onClick={p.onOpen} className="inline-flex items-center gap-1 text-[12.5px] font-medium text-paper-dim hover:text-paper">
-            Abrir dashboard de {tab.team} <ArrowRight size={14} />
-          </button>
+    <div id={sectionId(tab.regional, tab.team)} className="scroll-mt-[130px] space-y-4 rounded-[28px] border border-white/[0.06] bg-white/[0.015] p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex h-[34px] items-center">
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo.src} alt={tab.team} width={logo.w} height={logo.h} className={`${logo.className} w-auto`} />
+          ) : (
+            <span className="display text-[26px] text-paper">{tab.team}</span>
+          )}
         </div>
-      )}
-      {p.showHeader && <MiniKpis rows={rows} today={p.today} compact />}
+        <button onClick={p.onOpen} className="inline-flex items-center gap-1 text-[12.5px] font-medium text-paper-dim hover:text-paper">
+          Abrir dashboard de {tab.team} <ArrowRight size={14} />
+        </button>
+      </div>
       {tab.rows === 0 ? (
         <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">
           Pauta ainda sem registros. Os gráficos de {tab.team} aparecem assim que a primeira linha da guia for preenchida.
@@ -205,9 +190,12 @@ function TeamBlock(p: {
       ) : !rows.length ? (
         <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">Nenhuma demanda de {tab.team} no filtro atual.</p>
       ) : (
-        <LazyMount estimate={estimateHeight(p.widgets)}>
-          <WidgetGrid widgets={p.widgets} editing={false} onChange={() => {}} bases={{ base, cross: p.cross, ctx: { ...p.ctx, filters: teamFilters }, global: p.filters.period }} />
-        </LazyMount>
+        <>
+          <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} />
+          <LazyMount estimate={estimateHeight(p.widgets)}>
+            <WidgetGrid widgets={p.widgets} editing={false} onChange={() => {}} bases={{ base, cross: p.cross, ctx: { ...p.ctx, filters: teamFilters }, global: p.filters.period }} />
+          </LazyMount>
+        </>
       )}
     </div>
   );

@@ -58,7 +58,6 @@ export default function Dashboard() {
   const [view, setView] = useState<"dashboard" | "panorama">("dashboard");
   const shared = useSharedLayout();
   const dashEditor = useLayoutEditor("dashboard", shared);
-  const panoEditor = useLayoutEditor("panorama", shared);
 
   useEffect(() => {
     setFilters(readFilters());
@@ -304,7 +303,7 @@ export default function Dashboard() {
               filters={filters}
               today={today}
               ctx={ctx}
-              editor={panoEditor}
+              widgets={shared.layout.dashboard}
               canEdit={shared.canEdit && !presenting}
               onDrill={setDrill}
               onOpen={(r, t) => navigate(r, t)}
