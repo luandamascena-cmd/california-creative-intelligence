@@ -7,6 +7,7 @@ import { C, LATE, STATUS_COLORS, STATUS_ORDER, axisLabel, splitLine, tooltipBase
 import { CAT_LABEL, fmtPct, isLate } from "@/lib/analytics";
 import type { Demand, StatusCategory } from "@/lib/types";
 import type { ChartProps } from "./types";
+import { PersonDemands, useWide } from "./PersonDemands";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -33,6 +34,9 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
     () => peopleStats(rows).sort((a, b) => b[sort] - a[sort] || a.name.localeCompare(b.name)),
     [rows, sort],
   );
+  const [picked, setPicked] = useState<string | null>(null);
+  const current = picked && data.some((p) => p.name === picked) ? picked : data[0]?.name ?? null;
+  const { ref: box, wide } = useWide();
   const option = useMemo(
     () => ({
       grid: { left: 4, right: 36, top: 28, bottom: 4, containLabel: true },
@@ -55,13 +59,14 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
         axisTick: { show: false },
         axisLine: { show: false },
         axisLabel: { ...axisLabel, color: C.dim, width: 150, overflow: "truncate" },
+        triggerEvent: true,
       },
       series: [
-        { name: "Demandas", type: "bar", barWidth: 8, barGap: "30%", itemStyle: { color: C.mark, borderRadius: [0, 4, 4, 0] }, data: data.map((d) => d.demands), label: { show: true, position: "right", color: C.mute, fontSize: 10.5 } },
-        { name: "Projetos", type: "bar", barWidth: 8, itemStyle: { color: "#8C8579", borderRadius: [0, 4, 4, 0] }, data: data.map((d) => d.projectCount) },
+        { name: "Demandas", type: "bar", barWidth: 8, barGap: "30%", itemStyle: { color: C.mark, borderRadius: [0, 4, 4, 0] }, data: data.map((d) => ({ value: d.demands, itemStyle: { opacity: d.name === current ? 1 : 0.38 } })), label: { show: true, position: "right", color: C.mute, fontSize: 10.5 } },
+        { name: "Projetos", type: "bar", barWidth: 8, itemStyle: { color: "#8C8579", borderRadius: [0, 4, 4, 0] }, data: data.map((d) => ({ value: d.projectCount, itemStyle: { opacity: d.name === current ? 1 : 0.38 } })) },
       ],
     }),
-    [data],
+    [data, current],
   );
   return (
     <ChartCard
@@ -84,13 +89,21 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
       table={{ columns: ["Colaborador", "Demandas", "Projetos", "Planejamento", "Direção de arte", "Abertas"], rows: data.map((d) => [d.name, d.demands, d.projectCount, d.plan, d.art, d.open]) }}
     >
       {(ref) => (
-        <EChart
-          ref={ref}
-          option={option}
-          height={Math.max(240, data.length * 30 + 40)}
-          ariaLabel="Demandas e projetos por colaborador"
-          onClick={(e) => ctx.drill({ title: e.name, subtitle: "Demandas do colaborador", rows: rows.filter((d) => d.people.includes(e.name)), apply: { person: e.name } })}
-        />
+        <div ref={box} className={wide ? "grid grid-cols-[minmax(0,1fr)_400px] items-start gap-5" : "space-y-4"}>
+          <div className="min-w-0">
+            <p className="mb-1 text-[11.5px] text-paper-faint">Clique em um nome para ver as demandas {wide ? "ao lado" : "abaixo"}.</p>
+            <EChart ref={ref} option={option} height={Math.max(240, data.length * 30 + 40)} ariaLabel="Demandas e projetos por colaborador" onClick={(e) => setPicked(e.componentType === "yAxis" ? String((e as unknown as { value: string }).value) : e.name)} />
+          </div>
+          {current && (
+            <PersonDemands
+              name={current}
+              rows={rows.filter((d) => d.people.includes(current))}
+              today={ctx.today}
+              caption={rows.filter((d) => d.people.includes(current)).length === 1 ? "demanda no recorte" : "demandas no recorte"}
+              onExpand={() => ctx.drill({ title: current, subtitle: "Demandas do colaborador", rows: rows.filter((d) => d.people.includes(current)), apply: { person: current } })}
+            />
+          )}
+        </div>
       )}
     </ChartCard>
   );
@@ -113,6 +126,9 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, s]) => ({ name, ...s }));
   }, [open, ctx.today]);
   const totalOpen = open.length;
+  const [picked, setPicked] = useState<string | null>(null);
+  const current = picked && people.some((p) => p.name === picked) ? picked : people[0]?.name ?? null;
+  const { ref: box, wide } = useWide();
   const option = useMemo(
     () => ({
       grid: { left: 4, right: 70, top: 28, bottom: 4, containLabel: true },
@@ -136,6 +152,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
         axisTick: { show: false },
         axisLine: { show: false },
         axisLabel: { ...axisLabel, color: C.dim, width: 150, overflow: "truncate" },
+        triggerEvent: true,
       },
       series: cats.map((c, i) => ({
         name: CAT_LABEL[c as StatusCategory],
@@ -143,7 +160,10 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
         stack: "s",
         barWidth: 14,
         itemStyle: { color: STATUS_COLORS[c], borderColor: C.card, borderWidth: 1.5, borderRadius: i === cats.length - 1 ? [0, 4, 4, 0] : 0 },
-        data: people.map((p) => open.filter((d) => d.statusCategory === c && d.people.includes(p.name)).length),
+        data: people.map((p) => ({
+          value: open.filter((d) => d.statusCategory === c && d.people.includes(p.name)).length,
+          itemStyle: { opacity: !current || p.name === current ? 1 : 0.38 },
+        })),
         label:
           i === cats.length - 1
             ? {
@@ -158,7 +178,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
             : undefined,
       })),
     }),
-    [people, cats, open, totalOpen],
+    [people, cats, open, totalOpen, current],
   );
   return (
     <ChartCard
@@ -170,13 +190,27 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
       table={{ columns: ["Colaborador", ...cats.map((c) => CAT_LABEL[c as StatusCategory]), "Vencidas"], rows: people.map((p) => [p.name, ...cats.map((c) => open.filter((d) => d.statusCategory === c && d.people.includes(p.name)).length), p.late]) }}
     >
       {(ref) => (
-        <EChart
-          ref={ref}
-          option={option}
-          height={Math.max(220, people.length * 30 + 40)}
-          ariaLabel="Demandas abertas por colaborador e status"
-          onClick={(e) => ctx.drill({ title: e.name, subtitle: "Demandas abertas do colaborador", rows: open.filter((d) => d.people.includes(e.name)), apply: { person: e.name } })}
-        />
+        <div ref={box} className={wide ? "grid grid-cols-[minmax(0,1fr)_400px] items-start gap-5" : "space-y-4"}>
+          <div className="min-w-0">
+            <p className="mb-1 text-[11.5px] text-paper-faint">Clique em um nome para ver as demandas {wide ? "ao lado" : "abaixo"}.</p>
+            <EChart
+              ref={ref}
+              option={option}
+              height={Math.max(220, people.length * 30 + 40)}
+              ariaLabel="Demandas abertas por colaborador e status"
+              onClick={(e) => setPicked(e.componentType === "yAxis" ? String((e as unknown as { value: string }).value) : e.name)}
+            />
+          </div>
+          {current && (
+            <PersonDemands
+              name={current}
+              rows={open.filter((d) => d.people.includes(current))}
+              today={ctx.today}
+              caption={open.filter((d) => d.people.includes(current)).length === 1 ? "demanda aberta" : "demandas abertas"}
+              onExpand={() => ctx.drill({ title: current, subtitle: "Demandas abertas do colaborador", rows: open.filter((d) => d.people.includes(current)), apply: { person: current } })}
+            />
+          )}
+        </div>
       )}
     </ChartCard>
   );

@@ -5,6 +5,8 @@ import { AnimatedNumber } from "./AnimatedNumber";
 import { CAT_LABEL, type Kpis } from "@/lib/analytics";
 import type { Capabilities, StatusCategory } from "@/lib/types";
 import { LATE, STATUS_COLORS } from "./theme";
+import { Insights } from "./Insights";
+import type { Demand } from "@/lib/types";
 
 interface CardProps {
   label: string;
@@ -114,5 +116,26 @@ function Stat({ label, value, suffix = "", title }: { label: string; value: numb
         {suffix && <span className="ml-0.5 font-sans text-[11px] normal-case text-paper-mute">{suffix}</span>}
       </span>
     </span>
+  );
+}
+
+/** Abertura da página: um único número (projetos) e, ao lado, os insights do recorte. */
+export function Headline({ k, caps, rows, today }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string }) {
+  return (
+    <section aria-label="Resumo do recorte" className="grid gap-4 lg:grid-cols-[minmax(240px,300px)_1fr]">
+      <div className="card relative flex flex-col justify-between overflow-hidden p-6" title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
+        <div className="flex items-center justify-between gap-2">
+          <span className="eyebrow">Projetos</span>
+          {!caps.hasProjectColumn && <span className="rounded border border-white/[0.12] px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">estimativa</span>}
+        </div>
+        <div className="display mt-4 text-[88px] leading-none text-paper sm:text-[104px]">
+          <AnimatedNumber value={k.projects} />
+        </div>
+        <div className="mt-3 text-[12.5px] text-paper-mute">
+          {k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${k.demands === k.projects ? "demanda" : "demandas"} por projeto · ${k.demands} no total` : "sem dados no recorte"}
+        </div>
+      </div>
+      <Insights rows={rows} today={today} compact />
+    </section>
   );
 }

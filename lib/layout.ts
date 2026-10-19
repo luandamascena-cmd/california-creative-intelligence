@@ -50,6 +50,8 @@ export interface SharedLayout {
   /** Modelo aplicado a todas as seções do Panorama. */
   panorama: Widget[];
   updatedAt: string | null;
+  /** Ajustes pontuais já aplicados a um layout salvo (ver app/api/layout/route.ts). */
+  migrations?: string[];
 }
 
 const w = (chart: ChartKey, span: Span): Widget => ({ id: chart, chart, span });
@@ -59,10 +61,11 @@ export const DEFAULT_LAYOUT: SharedLayout = {
   dashboard: [
     w("clients", 5), w("bu", 4), w("formats", 3),
     w("timeline", 7), w("status", 5),
-    w("people", 6), w("workload", 6),
+    w("workload", 12),
+    w("people", 6), w("nature", 6),
     w("deadlines", 8), w("topClients", 4),
     w("regional", 3), w("projectsBu", 4), w("heatmap", 5),
-    w("nature", 6), w("formatsBu", 3), w("priority", 3),
+    w("formatsBu", 6), w("priority", 6),
   ],
   panorama: [w("status", 5), w("clients", 4), w("formats", 3), w("people", 6), w("timeline", 6)],
   updatedAt: null,
@@ -108,5 +111,6 @@ export function sanitizeLayout(input: unknown): SharedLayout {
     dashboard: cleanList(o.dashboard) ?? DEFAULT_LAYOUT.dashboard,
     panorama: cleanList(o.panorama) ?? DEFAULT_LAYOUT.panorama,
     updatedAt: typeof o.updatedAt === "string" ? o.updatedAt : null,
+    migrations: Array.isArray(o.migrations) ? o.migrations.filter((m): m is string => typeof m === "string").slice(0, 50) : [],
   };
 }

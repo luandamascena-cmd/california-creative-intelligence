@@ -7,8 +7,7 @@ import { useDataset } from "./useDataset";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { FilterBar } from "./FilterBar";
-import { KpiGrid } from "./Kpis";
-import { Insights } from "./Insights";
+import { Headline } from "./Kpis";
 import { Drawer, downloadCsv } from "./Drawer";
 import { GlossaryModal, QualityModal } from "./Panels";
 import { HeatmapChart, RegionalChart } from "./charts/structure";
@@ -138,7 +137,6 @@ export default function Dashboard() {
   const context = view === "panorama" ? "Panorama" : filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
   const contextTabs = tabs.filter((t) => (!filters.regional || t.regional === filters.regional) && (!filters.team || t.team === filters.team));
   const emptyContext = !!filters.regional && !navRows.length;
-  const teamsInRegional = tabs.filter((t) => t.regional === filters.regional).map((t) => t.team);
 
   // Modo apresentação: tela cheia, sem barra lateral; rotação opcional pelas regionais com dados.
   const togglePresent = async () => {
@@ -296,7 +294,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} teams={teamsInRegional} today={today} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
+          {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} today={today} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
 
           {view === "panorama" && ctx ? (
             <Panorama
@@ -322,14 +320,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {rows.length > 0 && <KpiGrid
-            k={kpis}
-            caps={data.capabilities}
-            onStatus={(cat) => setDrill({ title: CAT_LABEL[cat], subtitle: "Demandas por status", rows: rows.filter((d) => d.statusCategory === cat) })}
-            onLate={() => setDrill({ title: "Atrasadas", subtitle: "Abertas com prazo vencido", rows: rows.filter((d) => isLate(d, today)) })}
-          />}
-
-          <Insights rows={rows} today={today} />
+          {rows.length > 0 && <Headline k={kpis} caps={data.capabilities} rows={rows} today={today} />}
 
           {ctx && !rows.length && (
             <div className="grid grid-cols-12 gap-4">

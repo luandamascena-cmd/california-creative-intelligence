@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { KpiGrid } from "./Kpis";
+import { Headline } from "./Kpis";
 import { EditBar, WidgetGrid, type useLayoutEditor } from "./LayoutGrid";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, CAT_LABEL, computeKpis, isLate, type Filters } from "@/lib/analytics";
@@ -84,12 +84,7 @@ export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, 
       {/* Consolidado */}
       <section id="consolidado" className="scroll-mt-[130px] space-y-4">
         <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
-        <KpiGrid
-          k={kpis}
-          caps={data.capabilities}
-          onStatus={(cat) => onDrill({ title: CAT_LABEL[cat], subtitle: "Demandas por status", rows: consolidated.filter((d) => d.statusCategory === cat) })}
-          onLate={() => onDrill({ title: "Atrasadas", subtitle: "Abertas com prazo vencido", rows: consolidated.filter((d) => isLate(d, today)) })}
-        />
+        <Headline k={kpis} caps={data.capabilities} rows={consolidated} today={today} />
       </section>
 
       {/* Matriz comparativa */}

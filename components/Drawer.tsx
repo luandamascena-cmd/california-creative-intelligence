@@ -133,7 +133,7 @@ function Field({ k, v, color, extra = "", wide }: { k: string; v: string; color?
 }
 
 /** Ícone pelo tipo de destino do link. */
-function linkIcon(url: string) {
+export function linkIcon(url: string) {
   const u = url.toLowerCase();
   if (u.includes("docs.google.com/presentation")) return Presentation;
   if (u.includes("docs.google.com/spreadsheets")) return FileSpreadsheet;
@@ -144,7 +144,7 @@ function linkIcon(url: string) {
   return Link2;
 }
 
-function linkHost(url: string) {
+export function linkHost(url: string) {
   try {
     const h = new URL(url).hostname.replace(/^www\./, "");
     if (h === "docs.google.com" || h === "drive.google.com") return "Google";
