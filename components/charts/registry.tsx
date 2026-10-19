@@ -60,13 +60,13 @@ export const CHARTS: Record<ChartKey, ChartDef> = {
     label: "Projetos por Colaboradores",
     Comp: PeopleChart,
     alt: {
-      title: "Demandas por Colaboradores",
+      title: "Volume por Colaboradores",
       dimension: "Colaborador",
       data: (rows) => countBy(rows, (d) => d.people),
       drill: (name, rows) => ({ title: name, subtitle: "Demandas do colaborador", rows: rows.filter((d) => d.people.includes(name)), apply: { person: name } }),
     },
   },
-  workload: { label: "Carga Aberta por Colaboradores", Comp: WorkloadChart },
+  workload: { label: "Demandas por Colaboradores", Comp: WorkloadChart },
   deadlines: { label: "Prazos e Atrasos", Comp: DeadlinesPanel },
   topClients: {
     label: "Top 10 Clientes",

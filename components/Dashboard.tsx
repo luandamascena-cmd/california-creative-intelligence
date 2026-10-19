@@ -21,7 +21,7 @@ import { regionalName, tabLabel } from "@/lib/labels";
 import { filterByPeriod } from "@/lib/period";
 import { PeriodScope } from "./PeriodScope";
 
-const STORE = "ci-filters-v1";
+const STORE = "ci-filters-v2";
 const KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[];
 
 function readFilters(): Filters {
@@ -32,10 +32,12 @@ function readFilters(): Filters {
   if ([...qs.keys()].some((k) => KEYS.includes(k as keyof Filters))) {
     const f = { ...EMPTY_FILTERS } as Record<string, string | null>;
     KEYS.forEach((k) => (f[k] = qs.get(k)));
+    if (!f.period) f.period = EMPTY_FILTERS.period;
     return f as unknown as Filters;
   }
   try {
-    return { ...EMPTY_FILTERS, ...JSON.parse(localStorage.getItem(STORE) ?? "{}") };
+    const saved = { ...EMPTY_FILTERS, ...JSON.parse(localStorage.getItem(STORE) ?? "{}") };
+    return { ...saved, period: saved.period || EMPTY_FILTERS.period };
   } catch {
     return EMPTY_FILTERS;
   }
@@ -325,6 +327,7 @@ export default function Dashboard() {
               k={kpis}
               caps={data.capabilities}
               rows={rows}
+              trendRows={baseRows}
               today={today}
               onStatus={(status) => setDrill({ title: status, subtitle: "Demandas por status", rows: rows.filter((d) => d.status === status), apply: { status } })}
             />

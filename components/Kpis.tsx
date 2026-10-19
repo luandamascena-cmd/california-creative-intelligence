@@ -178,7 +178,7 @@ function StatusSummary({ rows, onStatus }: { rows: Demand[]; onStatus: (status: 
 }
 
 /** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
-export function Headline({ k, caps, rows, today, onStatus }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void }) {
+export function Headline({ k, caps, rows, today, onStatus, trendRows }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[] }) {
   const withStatus = !!onStatus && caps.hasStatus;
   return (
     <section
@@ -199,7 +199,7 @@ export function Headline({ k, caps, rows, today, onStatus }: { k: Kpis; caps: Ca
       </div>
       {withStatus && <StatusSummary rows={rows} onStatus={onStatus!} />}
       <div className={withStatus ? "md:col-span-2 2xl:col-span-1" : "h-full"}>
-        <Insights rows={rows} today={today} compact />
+        <Insights rows={rows} today={today} compact trendRows={trendRows} />
       </div>
     </section>
   );

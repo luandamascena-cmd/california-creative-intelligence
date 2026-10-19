@@ -8,6 +8,7 @@ import { CAT_LABEL, fmtPct, isLate } from "@/lib/analytics";
 import type { Demand, StatusCategory } from "@/lib/types";
 import type { ChartProps } from "./types";
 import { PersonDemands, useWide } from "./PersonDemands";
+import { initials, personPhoto, shortName } from "@/lib/people";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -109,110 +110,121 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
   );
 }
 
-/* 11 · Carga aberta por colaborador, por status */
+/* 11 · Demandas por colaborador: foto, quantidade de abertas e, ao clicar, a lista ao lado */
 export function WorkloadChart({ rows, ctx, className }: ChartProps) {
   const open = useMemo(() => rows.filter((d) => d.isOpen), [rows]);
   const cats = useMemo(() => STATUS_ORDER.filter((c) => c !== "finalizado" && open.some((d) => d.statusCategory === c)), [open]);
   const people = useMemo(() => {
-    const m = new Map<string, { total: number; late: number }>();
+    const m = new Map<string, { total: number; late: number; byCat: Record<string, number> }>();
     open.forEach((d) =>
       d.people.forEach((p) => {
-        const s = m.get(p) ?? { total: 0, late: 0 };
+        const s = m.get(p) ?? { total: 0, late: 0, byCat: {} };
         s.total++;
+        s.byCat[d.statusCategory] = (s.byCat[d.statusCategory] ?? 0) + 1;
         if (isLate(d, ctx.today)) s.late++;
         m.set(p, s);
       }),
     );
-    return [...m.entries()].sort((a, b) => b[1].total - a[1].total).map(([name, s]) => ({ name, ...s }));
+    return [...m.entries()].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0])).map(([name, s]) => ({ name, ...s }));
   }, [open, ctx.today]);
-  const totalOpen = open.length;
   const [picked, setPicked] = useState<string | null>(null);
   const current = picked && people.some((p) => p.name === picked) ? picked : people[0]?.name ?? null;
   const { ref: box, wide } = useWide();
-  const option = useMemo(
-    () => ({
-      grid: { left: 4, right: 70, top: 28, bottom: 4, containLabel: true },
-      legend: { top: 0, left: 0, itemWidth: 10, itemHeight: 10, icon: "roundRect", textStyle: { color: C.dim, fontSize: 11 } },
-      tooltip: {
-        ...tooltipBase,
-        trigger: "axis",
-        axisPointer: { type: "shadow", shadowStyle: { color: "rgba(255,251,240,0.04)" } },
-        formatter: (ps: { dataIndex: number; seriesName: string; value: number; marker: string }[]) => {
-          const p = people[ps[0].dataIndex];
-          return `<b>${esc(p.name)}</b> · ${p.total} abertas (${fmtPct(p.total, totalOpen)} das abertas)<br/>` +
-            ps.filter((x) => x.value).map((x) => `${x.marker}${x.seriesName}: ${x.value}`).join("<br/>") +
-            (p.late ? `<br/><span style="color:${LATE}">● ${p.late} com prazo vencido</span>` : "");
-        },
-      },
-      xAxis: { type: "value", splitLine, axisLabel, minInterval: 1 },
-      yAxis: {
-        type: "category",
-        inverse: true,
-        data: people.map((p) => p.name),
-        axisTick: { show: false },
-        axisLine: { show: false },
-        axisLabel: { ...axisLabel, color: C.dim, width: 150, overflow: "truncate" },
-        triggerEvent: true,
-      },
-      series: cats.map((c, i) => ({
-        name: CAT_LABEL[c as StatusCategory],
-        type: "bar",
-        stack: "s",
-        barWidth: 14,
-        itemStyle: { color: STATUS_COLORS[c], borderColor: C.card, borderWidth: 1.5, borderRadius: i === cats.length - 1 ? [0, 4, 4, 0] : 0 },
-        data: people.map((p) => ({
-          value: open.filter((d) => d.statusCategory === c && d.people.includes(p.name)).length,
-          itemStyle: { opacity: !current || p.name === current ? 1 : 0.38 },
-        })),
-        label:
-          i === cats.length - 1
-            ? {
-                show: true,
-                position: "right",
-                formatter: (x: { dataIndex: number }) => {
-                  const p = people[x.dataIndex];
-                  return p.late ? `{t|${p.total}}  {l|${p.late} venc.}` : `{t|${p.total}}`;
-                },
-                rich: { t: { color: C.paper, fontSize: 11 }, l: { color: LATE, fontSize: 10.5, fontWeight: 600 } },
-              }
-            : undefined,
-      })),
-    }),
-    [people, cats, open, totalOpen, current],
-  );
+  const mine = current ? open.filter((d) => d.people.includes(current)) : [];
+
   return (
     <ChartCard
       code="11"
-      title="Carga Aberta por Colaboradores"
+      title="Demandas por Colaboradores"
       className={className}
-      definition="Demandas abertas (status diferente de Finalizado) em que a pessoa aparece como planejamento ou direção de arte, empilhadas por status. Mostra concentração da pauta, não capacidade: a planilha não informa horas nem esforço. 'venc.' indica demandas com ENTREGA anterior a hoje."
+      definition="Demandas abertas (status diferente de Finalizado) em que a pessoa aparece como planejamento ou direção de arte. O número no círculo é a quantidade de demandas abertas; o ponto vermelho, quantas estão com ENTREGA vencida. A barra embaixo do nome mostra a divisão por status. Mostra concentração da pauta, não capacidade: a planilha não informa horas nem esforço."
       empty={!people.length && "Sem demandas abertas com responsável no filtro atual."}
-      table={{ columns: ["Colaborador", ...cats.map((c) => CAT_LABEL[c as StatusCategory]), "Vencidas"], rows: people.map((p) => [p.name, ...cats.map((c) => open.filter((d) => d.statusCategory === c && d.people.includes(p.name)).length), p.late]) }}
+      table={{ columns: ["Colaborador", "Abertas", ...cats.map((c) => CAT_LABEL[c as StatusCategory]), "Vencidas"], rows: people.map((p) => [p.name, p.total, ...cats.map((c) => p.byCat[c] ?? 0), p.late]) }}
     >
-      {(ref) => (
-        <div ref={box} className={wide ? "grid grid-cols-[minmax(0,1fr)_400px] items-start gap-5" : "space-y-4"}>
+      {() => (
+        <div ref={box} className={wide ? "grid grid-cols-[minmax(0,1fr)_400px] items-start gap-6" : "space-y-5"}>
           <div className="min-w-0">
-            <p className="mb-1 text-[11.5px] text-paper-faint">Clique em um nome para ver as demandas {wide ? "ao lado" : "abaixo"}.</p>
-            <EChart
-              ref={ref}
-              option={option}
-              height={Math.max(220, people.length * 30 + 40)}
-              ariaLabel="Demandas abertas por colaborador e status"
-              onClick={(e) => setPicked(e.componentType === "yAxis" ? String((e as unknown as { value: string }).value) : e.name)}
-            />
+            <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-paper-faint">
+              <span>Clique em uma foto para ver as demandas {wide ? "ao lado" : "abaixo"}.</span>
+              {cats.map((c) => (
+                <span key={c} className="inline-flex items-center gap-1.5 text-paper-mute">
+                  <span className="h-2 w-2 rounded-sm" style={{ background: STATUS_COLORS[c] }} />
+                  {CAT_LABEL[c as StatusCategory]}
+                </span>
+              ))}
+              <span className="inline-flex items-center gap-1.5 text-paper-mute">
+                <span className="h-2 w-2 rounded-full" style={{ background: LATE }} />
+                Vencidas
+              </span>
+            </div>
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-x-3 gap-y-5">
+              {people.map((p) => {
+                const sel = p.name === current;
+                return (
+                  <li key={p.name}>
+                    <button
+                      onClick={() => setPicked(p.name)}
+                      aria-pressed={sel}
+                      title={`${p.name} · ${p.total} ${p.total === 1 ? "demanda aberta" : "demandas abertas"}${p.late ? ` · ${p.late} vencidas` : ""}`}
+                      className="group flex w-full flex-col items-center rounded-2xl px-1 py-2 text-center transition hover:bg-white/[0.04]"
+                    >
+                      <span className="relative">
+                        <Avatar name={p.name} size={72} selected={sel} />
+                        <span className="display absolute -bottom-1 -right-1 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-[#1b1b1d] bg-paper px-1.5 text-[16px] leading-none text-ink">
+                          {p.total}
+                        </span>
+                        {p.late > 0 && (
+                          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#1b1b1d] px-1 text-[10px] font-bold text-white" style={{ background: LATE }}>
+                            {p.late}
+                          </span>
+                        )}
+                      </span>
+                      <span className={`mt-2.5 block w-full truncate text-[12.5px] ${sel ? "font-semibold text-paper" : "text-paper-dim group-hover:text-paper"}`}>{shortName(p.name)}</span>
+                      <span className="mt-1.5 flex h-1 w-14 overflow-hidden rounded-full bg-white/[0.08]" aria-hidden>
+                        {cats.map((c) => (
+                          <span key={c} className="h-full" style={{ width: `${((p.byCat[c] ?? 0) / p.total) * 100}%`, background: STATUS_COLORS[c] }} />
+                        ))}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           {current && (
             <PersonDemands
               name={current}
-              rows={open.filter((d) => d.people.includes(current))}
+              rows={mine}
               today={ctx.today}
-              caption={open.filter((d) => d.people.includes(current)).length === 1 ? "demanda aberta" : "demandas abertas"}
-              onExpand={() => ctx.drill({ title: current, subtitle: "Demandas abertas do colaborador", rows: open.filter((d) => d.people.includes(current)), apply: { person: current } })}
+              caption={mine.length === 1 ? "demanda aberta" : "demandas abertas"}
+              onExpand={() => ctx.drill({ title: current, subtitle: "Demandas abertas do colaborador", rows: mine, apply: { person: current } })}
             />
           )}
         </div>
       )}
     </ChartCard>
+  );
+}
+
+/** Foto do colaborador em círculo; sem foto cadastrada, as iniciais. */
+export function Avatar({ name, size, selected }: { name: string; size: number; selected?: boolean }) {
+  const src = personPhoto(name);
+  const [broken, setBroken] = useState(false);
+  const hue = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
+  return (
+    <span
+      className={`flex items-center justify-center overflow-hidden rounded-full transition ${selected ? "ring-2 ring-clf-red ring-offset-2 ring-offset-[#1b1b1d]" : "ring-1 ring-white/15 group-hover:ring-white/35"}`}
+      style={{ width: size, height: size, background: `linear-gradient(145deg, hsl(${hue} 22% 30%), hsl(${(hue + 40) % 360} 18% 18%))` }}
+    >
+      {src && !broken ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={name} width={size} height={size} className="h-full w-full object-cover" onError={() => setBroken(true)} />
+      ) : (
+        <span className="display text-paper" style={{ fontSize: size * 0.36 }}>
+          {initials(name)}
+        </span>
+      )}
+    </span>
   );
 }
 

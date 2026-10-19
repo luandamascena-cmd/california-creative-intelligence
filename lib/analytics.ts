@@ -1,7 +1,7 @@
 // Filtros e agregações. Toda a dashboard deriva de uma única base filtrada.
 
 import type { Demand, StatusCategory } from "./types";
-import type { PeriodKey } from "./period";
+import { DEFAULT_PERIOD, type PeriodKey } from "./period";
 import { addDaysISO, diffDays, todayISO } from "./text";
 import { regionalName, tabLabel } from "./labels";
 
@@ -28,7 +28,7 @@ export const EMPTY_FILTERS: Filters = {
   status: null,
   priority: null,
   projectType: null,
-  period: null,
+  period: DEFAULT_PERIOD,
 };
 
 /** Filtros que o usuário escolhe além do contexto de navegação (regional e time). */

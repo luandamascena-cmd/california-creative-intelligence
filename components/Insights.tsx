@@ -16,7 +16,7 @@ interface Item {
  * Leituras automáticas do recorte: fatos calculados da planilha sobre o que está sendo produzido
  * (volume, formatos, clientes, unidades, novos negócios). Prazos e travas ficam no gráfico de status.
  */
-export function Insights({ rows, today, compact }: { rows: Demand[]; today: string; compact?: boolean }) {
+export function Insights({ rows, today, compact, trendRows }: { rows: Demand[]; today: string; compact?: boolean; trendRows?: Demand[] }) {
   const items = useMemo(() => {
     const out: Item[] = [];
     if (!rows.length) return out;
@@ -24,8 +24,10 @@ export function Insights({ rows, today, compact }: { rows: Demand[]; today: stri
     // Ritmo de entrada: últimos 30 dias contra os 30 anteriores.
     const d30 = addDaysISO(today, -30);
     const d60 = addDaysISO(today, -60);
-    const now = rows.filter((d) => d.start && d.start > d30 && d.start <= today).length;
-    const prev = rows.filter((d) => d.start && d.start > d60 && d.start <= d30).length;
+    // Comparação feita sobre a base sem recorte de período, senão os 30 dias anteriores ficariam vazios.
+    const trend = trendRows ?? rows;
+    const now = trend.filter((d) => d.start && d.start > d30 && d.start <= today).length;
+    const prev = trend.filter((d) => d.start && d.start > d60 && d.start <= d30).length;
     if (now && prev) {
       const delta = Math.round(((now - prev) / prev) * 100);
       out.push({
@@ -106,7 +108,7 @@ export function Insights({ rows, today, compact }: { rows: Demand[]; today: stri
       });
     }
     return out.slice(0, 4);
-  }, [rows, today]);
+  }, [rows, today, trendRows]);
 
   return (
     <section aria-labelledby="insights-t" className="card relative flex h-full flex-col overflow-hidden p-0">

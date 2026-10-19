@@ -1,16 +1,21 @@
-// Períodos de calendário que contêm a data de hoje: semana, mês, bimestre, trimestre, semestre e ano.
+// Períodos de análise: últimos 30 dias (padrão), períodos de calendário que contêm hoje e todo o histórico.
 import type { Demand } from "./types";
 import { addDaysISO, formatDateBR, weekStartISO } from "./text";
 
-export type PeriodKey = "semana" | "mes" | "bimestre" | "trimestre" | "semestre" | "ano";
+export type PeriodKey = "30d" | "semana" | "mes" | "bimestre" | "trimestre" | "semestre" | "ano" | "tudo";
+
+/** Toda dashboard abre nos últimos 30 dias. */
+export const DEFAULT_PERIOD: PeriodKey = "30d";
 
 export const PERIOD_OPTIONS: { value: PeriodKey; label: string }[] = [
+  { value: "30d", label: "Últimos 30 dias" },
   { value: "semana", label: "Semana" },
   { value: "mes", label: "Mês" },
   { value: "bimestre", label: "Bimestre" },
   { value: "trimestre", label: "Trimestre" },
   { value: "semestre", label: "Semestre" },
   { value: "ano", label: "Ano" },
+  { value: "tudo", label: "Todo o período" },
 ];
 
 const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
@@ -19,12 +24,14 @@ const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate
 
 /** Intervalo [início, fim] (aaaa-mm-dd) do período atual. */
 export function periodRange(key: PeriodKey, today: string): [string, string] {
+  if (key === "tudo") return ["0000-01-01", "9999-12-31"];
+  if (key === "30d") return [addDaysISO(today, -29), today];
   if (key === "semana") {
     const s = weekStartISO(today);
     return [s, addDaysISO(s, 6)];
   }
   const [y, m] = today.split("-").map(Number);
-  const size = { mes: 1, bimestre: 2, trimestre: 3, semestre: 6, ano: 12 }[key];
+  const size = ({ mes: 1, bimestre: 2, trimestre: 3, semestre: 6, ano: 12 } as Record<string, number>)[key];
   const first = Math.floor((m - 1) / size) * size + 1;
   const last = first + size - 1;
   return [`${y}-${pad(first)}-01`, `${y}-${pad(last)}-${pad(lastDay(y, last))}`];
@@ -32,7 +39,9 @@ export function periodRange(key: PeriodKey, today: string): [string, string] {
 
 /** Descrição por extenso do período atual, para tooltips e rótulos. */
 export function periodDescription(key: PeriodKey, today: string): string {
+  if (key === "tudo") return "todo o histórico da pauta";
   const [s, e] = periodRange(key, today);
+  if (key === "30d") return `${formatDateBR(s).slice(0, 5)} a ${formatDateBR(e).slice(0, 5)}`;
   const y = Number(s.slice(0, 4));
   const m = Number(s.slice(5, 7));
   switch (key) {
@@ -46,7 +55,7 @@ export function periodDescription(key: PeriodKey, today: string): string {
       return `${Math.ceil(m / 3)}º trimestre de ${y}`;
     case "semestre":
       return `${m <= 6 ? 1 : 2}º semestre de ${y}`;
-    case "ano":
+    default:
       return String(y);
   }
 }
@@ -56,7 +65,7 @@ export function periodDescription(key: PeriodKey, today: string): string {
  * Demandas abertas sem nenhuma data (em briefing, travadas) contam como pauta atual.
  */
 export function filterByPeriod(rows: Demand[], key: PeriodKey | null, today: string): Demand[] {
-  if (!key) return rows;
+  if (!key || key === "tudo") return rows;
   const [ps, pe] = periodRange(key, today);
   return rows.filter((d) => {
     const s = d.start ?? d.due;
@@ -67,4 +76,4 @@ export function filterByPeriod(rows: Demand[], key: PeriodKey | null, today: str
 }
 
 export const PERIOD_DEFINITION =
-  "Período de calendário que contém a data de hoje. Uma demanda entra no período quando o intervalo entre INÍCIO e ENTREGA cruza esse período; demandas abertas sem datas (em briefing ou travadas) contam como pauta atual.";
+  "Últimos 30 dias (padrão) ou período de calendário que contém a data de hoje. Uma demanda entra no período quando o intervalo entre INÍCIO e ENTREGA cruza esse período; demandas abertas sem datas (em briefing ou travadas) contam como pauta atual.";

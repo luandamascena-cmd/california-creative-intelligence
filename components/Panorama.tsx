@@ -84,7 +84,7 @@ export function Panorama({ data, filters, today, ctx, editor, canEdit, onDrill, 
       {/* Consolidado */}
       <section id="consolidado" className="scroll-mt-[130px] space-y-4">
         <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
-        <Headline k={kpis} caps={data.capabilities} rows={consolidated} today={today} />
+        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} />
       </section>
 
       {/* Matriz comparativa */}
