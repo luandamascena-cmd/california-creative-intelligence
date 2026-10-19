@@ -60,7 +60,7 @@ export const DEFAULT_LAYOUT: SharedLayout = {
   version: 1,
   dashboard: [
     w("clients", 5), w("bu", 4), w("formats", 3),
-    w("timeline", 7), w("status", 5),
+    w("timeline", 12),
     w("workload", 12),
     w("people", 6), w("nature", 6),
     w("deadlines", 8), w("topClients", 4),

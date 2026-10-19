@@ -133,7 +133,7 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 - **Layout personalizado** (somente administrador): entre com `ADMIN_PASSWORD` e use Personalizar para arrastar, mudar a largura, trocar o tipo (barras, rosca, ranking, tabela), remover ou adicionar gráficos. "Salvar para todos" grava o layout no servidor (`LAYOUT_FILE`, no volume `/data` do Railway) e todos os acessos passam a ver a mesma arrumação. A dashboard e o Panorama têm layouts separados; "Restaurar padrão" volta à arrumação original.
 - **Navegação**: Visão Geral (todas as guias) ou regional; dentro da regional, filtro por time. Regionais e times vêm da planilha. O menu lateral recolhe pela alça na borda (ou por Recolher) e mostra as siglas SP, RJ, FOR e SSA.
 - **Filtros**: Business Unit, cliente e período ficam fixos no topo. Colaborador, formato, status, prioridade e tipo entram pelo "Aplicar como filtro" do drill-down e aparecem como etiquetas removíveis. Os filtros ficam na URL, então um link compartilhado abre no mesmo recorte.
-- **Abertura**: um único número (projetos) e, ao lado, os insights do recorte.
+- **Abertura**: o número de projetos, o status das demandas em formato compacto e os insights do recorte (volume, formatos, clientes, Business Units e novos negócios; prazos e travas ficam no status).
 - **Colaboradores**: nos gráficos de carga aberta e de projetos por colaborador, clicar em um nome mostra as demandas daquela pessoa ao lado do gráfico (vencidas primeiro), com status, prazo e links.
 - **Drill-down**: clique em qualquer barra, fatia, célula, ponto ou indicador para ver os registros, com origem (guia e linha). "Aplicar como filtro" leva o recorte para a dashboard inteira.
 - **Busca global**: `Ctrl/⌘ + K`.

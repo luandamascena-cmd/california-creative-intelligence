@@ -21,6 +21,11 @@ const MIGRATIONS: { id: string; apply: (l: SharedLayout) => SharedLayout }[] = [
     id: "2026-10-19-carga-por-colaborador-inteira",
     apply: (l) => ({ ...l, dashboard: l.dashboard.map((w) => (w.chart === "workload" ? { ...w, span: 12 } : w)) }),
   },
+  {
+    // O status subiu para a abertura da página, ao lado do número de projetos.
+    id: "2026-10-19-status-na-abertura",
+    apply: (l) => ({ ...l, dashboard: l.dashboard.filter((w) => w.chart !== "status") }),
+  },
 ];
 
 async function writeLayout(layout: SharedLayout) {

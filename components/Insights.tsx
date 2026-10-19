@@ -1,44 +1,76 @@
 "use client";
 
 import { useMemo } from "react";
-import { Sparkles } from "lucide-react";
-import { countBy, fmtPct, isLate } from "@/lib/analytics";
-import { diffDays } from "@/lib/text";
+import { Briefcase, Layers, Lightbulb, Shapes, Sparkles, TrendingDown, TrendingUp, Users, type LucideIcon } from "lucide-react";
+import { countBy, fmtPct } from "@/lib/analytics";
+import { addDaysISO } from "@/lib/text";
 import type { Demand } from "@/lib/types";
 
-/** Leituras automáticas: frases calculadas a partir dos dados filtrados (fatos, não opiniões). */
+interface Item {
+  k: string;
+  icon: LucideIcon;
+  text: React.ReactNode;
+}
+
+/**
+ * Leituras automáticas do recorte: fatos calculados da planilha sobre o que está sendo produzido
+ * (volume, formatos, clientes, unidades, novos negócios). Prazos e travas ficam no gráfico de status.
+ */
 export function Insights({ rows, today, compact }: { rows: Demand[]; today: string; compact?: boolean }) {
   const items = useMemo(() => {
-    const out: { k: string; text: React.ReactNode }[] = [];
+    const out: Item[] = [];
     if (!rows.length) return out;
-    const open = rows.filter((d) => d.isOpen);
 
-    const planners = countBy(open, (d) => d.planners);
-    if (planners[0] && open.length >= 3) {
+    // Ritmo de entrada: últimos 30 dias contra os 30 anteriores.
+    const d30 = addDaysISO(today, -30);
+    const d60 = addDaysISO(today, -60);
+    const now = rows.filter((d) => d.start && d.start > d30 && d.start <= today).length;
+    const prev = rows.filter((d) => d.start && d.start > d60 && d.start <= d30).length;
+    if (now && prev) {
+      const delta = Math.round(((now - prev) / prev) * 100);
       out.push({
-        k: "plan",
+        k: "ritmo",
+        icon: delta >= 0 ? TrendingUp : TrendingDown,
         text: (
           <>
-            <b>{planners[0].name}</b> está no planejamento de <b>{fmtPct(planners[0].value, open.length)}</b> das demandas abertas ({planners[0].value} de {open.length}).
+            Entraram <b>{now}</b> demandas nos últimos 30 dias, {delta === 0 ? "o mesmo ritmo" : <><b>{Math.abs(delta)}% {delta > 0 ? "a mais" : "a menos"}</b> que</>} nos 30 dias anteriores.
           </>
         ),
       });
     }
-    const late = open.filter((d) => isLate(d, today)).sort((a, b) => a.due!.localeCompare(b.due!));
-    if (late.length) {
+
+    const formats = countBy(rows, (d) => d.format);
+    if (formats[0] && rows.length >= 3) {
       out.push({
-        k: "late",
+        k: "formato",
+        icon: Shapes,
         text: (
           <>
-            <b>{late.length}</b> {late.length === 1 ? "demanda aberta está" : "demandas abertas estão"} com prazo vencido; a mais antiga, <b>{late[0].task}</b>, venceu há {diffDays(late[0].due!, today)} dias.
+            <b>{formats[0].name}</b> é o formato mais pedido: <b>{fmtPct(formats[0].value, rows.length)}</b> das demandas{formats[1] ? <>, seguido de {formats[1].name}</> : null}.
           </>
         ),
       });
     }
+
+    const clients = countBy(rows, (d) => d.client);
+    if (clients.length > 2) {
+      const top3 = clients.slice(0, 3).reduce((a, b) => a + b.value, 0);
+      out.push({
+        k: "clientes",
+        icon: Briefcase,
+        text: (
+          <>
+            <b>{clients[0].name}</b> lidera a pauta com {clients[0].value} demandas. Os três maiores clientes somam <b>{fmtPct(top3, rows.length)}</b> do volume.
+          </>
+        ),
+      });
+    }
+
     const bus = countBy(rows, (d) => d.bu);
     if (bus.length > 1) {
       out.push({
         k: "bu",
+        icon: Layers,
         text: (
           <>
             <b>{bus[0].name}</b> responde por <b>{fmtPct(bus[0].value, rows.length)}</b> das demandas do recorte.
@@ -46,24 +78,29 @@ export function Insights({ rows, today, compact }: { rows: Demand[]; today: stri
         ),
       });
     }
-    const blocked = open.filter((d) => d.statusCategory === "travado").length;
-    if (blocked && open.length) {
+
+    const newBiz = rows.filter((d) => /prospec|concorr/i.test(d.projectType)).length;
+    if (newBiz) {
       out.push({
-        k: "blocked",
+        k: "novos",
+        icon: Sparkles,
         text: (
           <>
-            <b>{fmtPct(blocked, open.length)}</b> da pauta aberta está travada ({blocked} {blocked === 1 ? "demanda" : "demandas"}).
+            Prospecção e concorrência somam <b>{fmtPct(newBiz, rows.length)}</b> do volume ({newBiz} {newBiz === 1 ? "demanda" : "demandas"} de novos negócios).
           </>
         ),
       });
     }
-    const newBiz = rows.filter((d) => /prospec|concorr/i.test(d.projectType)).length;
-    if (newBiz) {
+
+    const open = rows.filter((d) => d.isOpen);
+    const planners = countBy(open, (d) => d.planners);
+    if (planners[0] && open.length >= 3) {
       out.push({
-        k: "nb",
+        k: "planejamento",
+        icon: Users,
         text: (
           <>
-            Prospecção e concorrência somam <b>{fmtPct(newBiz, rows.length)}</b> do volume ({newBiz} demandas).
+            <b>{planners[0].name}</b> está no planejamento de <b>{fmtPct(planners[0].value, open.length)}</b> das demandas em andamento.
           </>
         ),
       });
@@ -71,21 +108,33 @@ export function Insights({ rows, today, compact }: { rows: Demand[]; today: stri
     return out.slice(0, 4);
   }, [rows, today]);
 
-  if (!items.length) return compact ? <div className="card flex items-center px-6 py-8 text-[13px] text-paper-mute">Sem leituras automáticas para este recorte.</div> : null;
   return (
-    <section aria-labelledby="insights-t" className={`card grid content-start overflow-hidden p-0 md:grid-cols-2 ${compact ? "" : "2xl:grid-cols-4"}`}>
-      <header className="col-span-full flex items-center justify-between gap-3 px-5 pb-1 pt-5">
-        <h2 id="insights-t" className="text-[15px] font-semibold text-paper">Insights</h2>
-        <span className="hidden items-center gap-1.5 text-[11px] text-paper-faint sm:flex">
-          <Sparkles size={11} /> Calculados automaticamente a partir do filtro. São fatos da planilha, não recomendações.
+    <section aria-labelledby="insights-t" className="card relative flex h-full flex-col overflow-hidden p-0">
+      {/* brilho suave atrás da lâmpada */}
+      <span aria-hidden className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-[#F5C451]/[0.10] blur-3xl" />
+      <header className="relative flex items-center gap-2.5 px-5 pb-1 pt-5">
+        <span className="ci-bulb relative flex h-8 w-8 items-center justify-center rounded-full border border-[#F5C451]/40 bg-[#F5C451]/[0.12] text-[#F5C451]">
+          <Lightbulb size={16} strokeWidth={2.2} />
         </span>
+        <h2 id="insights-t" className="text-[15px] font-semibold text-paper">
+          Insights
+        </h2>
+        <span className="ml-auto hidden text-[11px] text-paper-faint 2xl:block">Leituras automáticas do recorte</span>
       </header>
-      {items.map((it, i) => (
-        <div key={it.k} className={`flex gap-3 border-white/[0.06] px-5 pb-5 pt-3 ${compact ? "md:[&:nth-child(even)]:border-r" : "md:border-r md:last:border-r-0"}`}>
-          <span className="display mt-0.5 text-[13px] text-clf-red">{String(i + 1).padStart(2, "0")}</span>
-          <p className="text-[13px] leading-snug text-paper-dim [&_b]:font-semibold [&_b]:text-paper">{it.text}</p>
+      {items.length ? (
+        <div className={`relative grid flex-1 content-center ${compact ? "md:grid-cols-2" : "md:grid-cols-2 2xl:grid-cols-4"}`}>
+          {items.map((it) => (
+            <div key={it.k} className="flex gap-3 px-5 py-3">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.05] text-paper-dim">
+                <it.icon size={14} />
+              </span>
+              <p className="text-[13px] leading-snug text-paper-dim [&_b]:font-semibold [&_b]:text-paper">{it.text}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      ) : (
+        <p className="relative px-5 pb-5 pt-2 text-[13px] text-paper-mute">Sem leituras automáticas para este recorte.</p>
+      )}
     </section>
   );
 }

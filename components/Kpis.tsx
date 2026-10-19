@@ -2,9 +2,11 @@
 
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { AnimatedNumber } from "./AnimatedNumber";
-import { CAT_LABEL, type Kpis } from "@/lib/analytics";
+import { CAT_LABEL, fmtPct, type Kpis } from "@/lib/analytics";
 import type { Capabilities, StatusCategory } from "@/lib/types";
-import { LATE, STATUS_COLORS } from "./theme";
+import { C, LATE, STATUS_COLORS, STATUS_ORDER, tooltipBase } from "./theme";
+import { EChart } from "./EChart";
+import { useMemo } from "react";
 import { Insights } from "./Insights";
 import type { Demand } from "@/lib/types";
 
@@ -119,23 +121,86 @@ function Stat({ label, value, suffix = "", title }: { label: string; value: numb
   );
 }
 
-/** Abertura da página: um único número (projetos) e, ao lado, os insights do recorte. */
-export function Headline({ k, caps, rows, today }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string }) {
+/** Status das demandas em formato compacto, para a abertura da página. */
+function StatusSummary({ rows, onStatus }: { rows: Demand[]; onStatus: (status: string) => void }) {
+  const data = useMemo(() => {
+    const m = new Map<string, { n: number; cat: StatusCategory }>();
+    rows.forEach((d) => {
+      const s = m.get(d.status) ?? { n: 0, cat: d.statusCategory };
+      s.n++;
+      m.set(d.status, s);
+    });
+    return [...m.entries()].map(([name, s]) => ({ name, ...s })).sort((a, b) => STATUS_ORDER.indexOf(a.cat) - STATUS_ORDER.indexOf(b.cat));
+  }, [rows]);
+  const total = rows.length;
+  const option = useMemo(
+    () => ({
+      tooltip: { ...tooltipBase, trigger: "item", formatter: (p: { name: string; value: number }) => `<b>${p.name}</b><br/>${p.value} demandas · ${fmtPct(p.value, total)}` },
+      series: [
+        {
+          type: "pie",
+          radius: ["66%", "90%"],
+          padAngle: 2,
+          itemStyle: { borderRadius: 4, borderColor: C.card, borderWidth: 2 },
+          label: { show: false },
+          data: data.map((d) => ({ name: d.name, value: d.n, itemStyle: { color: STATUS_COLORS[d.cat] } })),
+        },
+      ],
+    }),
+    [data, total],
+  );
   return (
-    <section aria-label="Resumo do recorte" className="grid gap-4 lg:grid-cols-[minmax(240px,300px)_1fr]">
+    <div className="card flex flex-col p-5">
+      <h2 className="text-[14px] font-semibold text-paper">Status das Demandas</h2>
+      <div className="mt-3 flex flex-1 items-center gap-4">
+        <div className="relative h-[132px] w-[132px] shrink-0">
+          <EChart option={option} height={132} ariaLabel="Distribuição das demandas por status" onClick={(e) => onStatus(e.name)} />
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="display text-[28px] leading-none text-paper">{total}</span>
+            <span className="text-[10px] text-paper-mute">demandas</span>
+          </div>
+        </div>
+        <ul className="min-w-0 max-w-[340px] flex-1 space-y-1">
+          {data.map((d) => (
+            <li key={d.name}>
+              <button onClick={() => onStatus(d.name)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[12.5px] hover:bg-white/[0.06]">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: STATUS_COLORS[d.cat] }} />
+                <span className="min-w-0 flex-1 truncate text-paper-dim">{d.name}</span>
+                <span className="tabular-nums text-paper">{d.n}</span>
+                <span className="w-10 text-right tabular-nums text-paper-mute">{fmtPct(d.n, total)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
+export function Headline({ k, caps, rows, today, onStatus }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void }) {
+  const withStatus = !!onStatus && caps.hasStatus;
+  return (
+    <section
+      aria-label="Resumo do recorte"
+      className={`grid gap-4 ${withStatus ? "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]" : "lg:grid-cols-[minmax(240px,300px)_1fr]"}`}
+    >
       <div className="card relative flex flex-col justify-between overflow-hidden p-6" title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow">Projetos</span>
           {!caps.hasProjectColumn && <span className="rounded border border-white/[0.12] px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">estimativa</span>}
         </div>
-        <div className="display mt-4 text-[88px] leading-none text-paper sm:text-[104px]">
+        <div className="display mt-4 text-[88px] leading-none text-paper sm:text-[96px]">
           <AnimatedNumber value={k.projects} />
         </div>
         <div className="mt-3 text-[12.5px] text-paper-mute">
           {k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${k.demands === k.projects ? "demanda" : "demandas"} por projeto · ${k.demands} no total` : "sem dados no recorte"}
         </div>
       </div>
-      <Insights rows={rows} today={today} compact />
+      {withStatus && <StatusSummary rows={rows} onStatus={onStatus!} />}
+      <div className={withStatus ? "md:col-span-2 2xl:col-span-1" : "h-full"}>
+        <Insights rows={rows} today={today} compact />
+      </div>
     </section>
   );
 }

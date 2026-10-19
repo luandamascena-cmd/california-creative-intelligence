@@ -320,7 +320,15 @@ export default function Dashboard() {
             </div>
           )}
 
-          {rows.length > 0 && <Headline k={kpis} caps={data.capabilities} rows={rows} today={today} />}
+          {rows.length > 0 && (
+            <Headline
+              k={kpis}
+              caps={data.capabilities}
+              rows={rows}
+              today={today}
+              onStatus={(status) => setDrill({ title: status, subtitle: "Demandas por status", rows: rows.filter((d) => d.status === status), apply: { status } })}
+            />
+          )}
 
           {ctx && !rows.length && (
             <div className="grid grid-cols-12 gap-4">
