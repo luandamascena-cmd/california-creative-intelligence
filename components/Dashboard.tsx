@@ -327,6 +327,7 @@ export default function Dashboard() {
               caps={data.capabilities}
               rows={rows}
               trendRows={baseRows}
+              onDrill={setDrill}
               today={today}
               onStatus={(status) => setDrill({ title: status, subtitle: "Demandas por status", rows: rows.filter((d) => d.status === status), apply: { status } })}
             />

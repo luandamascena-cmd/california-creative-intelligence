@@ -92,7 +92,7 @@ export function Panorama({ data, filters, today, ctx, widgets, canEdit, onDrill,
           <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
           {canEdit && <span className="text-[11.5px] text-paper-faint">Os gráficos seguem o layout da dashboard. Para mudar, use Personalizar na Visão Geral.</span>}
         </div>
-        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} onStatus={statusDrill(consolidated)} />
+        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} onStatus={statusDrill(consolidated)} onDrill={onDrill} />
         <LazyMount estimate={estimateHeight(widgets)}>
           <WidgetGrid widgets={widgets} editing={false} onChange={() => {}} bases={{ base: consolidatedBase, cross: consolidatedBase, ctx: consolidatedCtx, global: filters.period }} />
         </LazyMount>
@@ -191,7 +191,7 @@ function TeamBlock(p: {
         <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">Nenhuma demanda de {tab.team} no filtro atual.</p>
       ) : (
         <>
-          <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} />
+          <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} onDrill={p.ctx.drill} />
           <LazyMount estimate={estimateHeight(p.widgets)}>
             <WidgetGrid widgets={p.widgets} editing={false} onChange={() => {}} bases={{ base, cross: p.cross, ctx: { ...p.ctx, filters: teamFilters }, global: p.filters.period }} />
           </LazyMount>

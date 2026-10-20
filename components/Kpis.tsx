@@ -8,6 +8,8 @@ import { C, LATE, STATUS_COLORS, STATUS_ORDER, tooltipBase } from "./theme";
 import { EChart } from "./EChart";
 import { useMemo } from "react";
 import { Insights } from "./Insights";
+import { ClientStrip } from "./ClientStrip";
+import type { DrillRequest } from "./charts/types";
 import type { Demand } from "@/lib/types";
 
 interface CardProps {
@@ -178,9 +180,10 @@ function StatusSummary({ rows, onStatus }: { rows: Demand[]; onStatus: (status: 
 }
 
 /** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
-export function Headline({ k, caps, rows, today, onStatus, trendRows }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[] }) {
+export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void }) {
   const withStatus = !!onStatus && caps.hasStatus;
   return (
+    <div className="space-y-4">
     <section
       aria-label="Resumo do recorte"
       className={`grid gap-4 ${withStatus ? "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]" : "lg:grid-cols-[minmax(240px,300px)_1fr]"}`}
@@ -202,5 +205,7 @@ export function Headline({ k, caps, rows, today, onStatus, trendRows }: { k: Kpi
         <Insights rows={rows} today={today} compact trendRows={trendRows} />
       </div>
     </section>
+    <ClientStrip rows={rows} today={today} onDrill={onDrill} />
+    </div>
   );
 }
