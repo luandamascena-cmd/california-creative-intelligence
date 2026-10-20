@@ -9,6 +9,8 @@ import { isLate } from "@/lib/analytics";
 import { clientLogo } from "@/lib/clients";
 import { initials } from "@/lib/people";
 import { LATE } from "./theme";
+import { useFitGrid } from "./useFitGrid";
+import { CountBadge, LateBadge } from "./charts/operation";
 import type { Demand } from "@/lib/types";
 
 /**
@@ -31,6 +33,7 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
       .map(([name, s]) => ({ name, ...s }));
   }, [rows, today]);
   const titleId = useId();
+  const fit = useFitGrid(clients.length, { minItem: 96, gap: 8, maxCircle: 104 });
   const [picked, setPicked] = useState<string | null>(null);
   const current = picked && clients.some((c) => c.name === picked) ? picked : null;
   const list = current ? sortByUrgency(rows.filter((d) => d.client === current && d.isOpen)) : [];
@@ -47,22 +50,24 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
         </span>
       </header>
       {clients.length > 0 && (
-        <ul className="flex snap-x gap-2 overflow-x-auto px-4 pb-4 pt-3 [scrollbar-width:thin]">
+        <div ref={fit.ref} className="px-4 pb-4 pt-3">
+        <ul className="grid gap-y-3" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, columnGap: fit.gap }}>
           {clients.map((c) => {
             const sel = c.name === current;
             const logo = clientLogo(c.name);
             return (
-              <li key={c.name} className="snap-start">
+              <li key={c.name}>
                 <button
                   onClick={() => setPicked(sel ? null : c.name)}
                   aria-pressed={sel}
                   aria-expanded={sel}
                   title={`${c.name} · ${c.open} ${c.open === 1 ? "demanda aberta" : "demandas abertas"}${c.late ? ` · ${c.late} vencidas` : ""}`}
-                  className={`group flex w-[92px] flex-col items-center rounded-2xl px-1 py-2 transition ${sel ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}`}
+                  className={`group flex w-full flex-col items-center rounded-2xl px-1 py-2 transition ${sel ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}`}
                 >
                   <span className="relative">
                     <span
-                      className={`flex h-[58px] w-[58px] items-center justify-center overflow-hidden rounded-full transition ${
+                      style={{ width: fit.circle, height: fit.circle }}
+                      className={`flex items-center justify-center overflow-hidden rounded-full transition ${
                         sel ? "ring-2 ring-clf-red ring-offset-2 ring-offset-[#1b1b1d]" : "ring-1 ring-white/15 group-hover:ring-white/35"
                       } ${logo ? "bg-paper" : "bg-gradient-to-br from-white/[0.14] to-white/[0.04]"}`}
                     >
@@ -70,17 +75,11 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={logo} alt={c.name} className="h-full w-full object-cover" />
                       ) : (
-                        <span className="display text-[20px] text-paper">{initials(c.name)}</span>
+                        <span className="display text-paper" style={{ fontSize: fit.circle * 0.34 }}>{initials(c.name)}</span>
                       )}
                     </span>
-                    <span className="display absolute -bottom-1 -right-1 flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#1b1b1d] bg-paper px-1 text-[14px] leading-none text-ink">
-                      {c.open}
-                    </span>
-                    {c.late > 0 && (
-                      <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-[#1b1b1d] px-1 text-[9.5px] font-bold text-white" style={{ background: LATE }}>
-                        {c.late}
-                      </span>
-                    )}
+                    <CountBadge value={c.open} size={fit.circle} />
+                    {c.late > 0 && <LateBadge value={c.late} size={fit.circle} />}
                   </span>
                   <span className={`mt-2 block w-full truncate text-center text-[11.5px] ${sel ? "font-semibold text-paper" : "text-paper-dim group-hover:text-paper"}`}>{c.name}</span>
                 </button>
@@ -88,6 +87,7 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
             );
           })}
         </ul>
+        </div>
       )}
       <AnimatePresence initial={false}>
         {current && (

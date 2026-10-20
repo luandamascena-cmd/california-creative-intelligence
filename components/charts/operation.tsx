@@ -8,6 +8,7 @@ import { CAT_LABEL, fmtPct, isLate } from "@/lib/analytics";
 import type { Demand, StatusCategory } from "@/lib/types";
 import type { ChartProps } from "./types";
 import { PersonDemands, useWide } from "./PersonDemands";
+import { useFitGrid } from "../useFitGrid";
 import { initials, personPhoto, shortName } from "@/lib/people";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -130,6 +131,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
   const [picked, setPicked] = useState<string | null>(null);
   const current = picked && people.some((p) => p.name === picked) ? picked : people[0]?.name ?? null;
   const { ref: box, wide } = useWide();
+  const fit = useFitGrid(people.length, { minItem: 104, gap: 12, maxCircle: 120 });
   const mine = current ? open.filter((d) => d.people.includes(current)) : [];
 
   return (
@@ -157,7 +159,8 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
                 Vencidas
               </span>
             </div>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-x-3 gap-y-5">
+            <div ref={fit.ref}>
+            <ul className="grid gap-y-5" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, columnGap: fit.gap }}>
               {people.map((p) => {
                 const sel = p.name === current;
                 return (
@@ -169,15 +172,9 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
                       className="group flex w-full flex-col items-center rounded-2xl px-1 py-2 text-center transition hover:bg-white/[0.04]"
                     >
                       <span className="relative">
-                        <Avatar name={p.name} size={72} selected={sel} />
-                        <span className="display absolute -bottom-1 -right-1 flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-[#1b1b1d] bg-paper px-1.5 text-[16px] leading-none text-ink">
-                          {p.total}
-                        </span>
-                        {p.late > 0 && (
-                          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-[#1b1b1d] px-1 text-[10px] font-bold text-white" style={{ background: LATE }}>
-                            {p.late}
-                          </span>
-                        )}
+                        <Avatar name={p.name} size={fit.circle} selected={sel} />
+                        <CountBadge value={p.total} size={fit.circle} />
+                        {p.late > 0 && <LateBadge value={p.late} size={fit.circle} />}
                       </span>
                       <span className={`mt-2.5 block w-full truncate text-[12.5px] ${sel ? "font-semibold text-paper" : "text-paper-dim group-hover:text-paper"}`}>{shortName(p.name)}</span>
                       <span className="mt-1.5 flex h-1 w-14 overflow-hidden rounded-full bg-white/[0.08]" aria-hidden>
@@ -190,6 +187,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
                 );
               })}
             </ul>
+            </div>
           </div>
           {current && (
             <PersonDemands
@@ -203,6 +201,32 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
         </div>
       )}
     </ChartCard>
+  );
+}
+
+/** Quantidade no canto inferior do círculo, proporcional ao tamanho dele. */
+export function CountBadge({ value, size }: { value: number; size: number }) {
+  const h = Math.round(Math.max(22, size * 0.34));
+  return (
+    <span
+      className="display absolute -bottom-1 -right-1 flex items-center justify-center rounded-full border-2 border-[#1b1b1d] bg-paper leading-none text-ink"
+      style={{ height: h, minWidth: h, paddingInline: h * 0.22, fontSize: h * 0.6 }}
+    >
+      {value}
+    </span>
+  );
+}
+
+/** Vencidas no canto superior do círculo. */
+export function LateBadge({ value, size }: { value: number; size: number }) {
+  const h = Math.round(Math.max(17, size * 0.24));
+  return (
+    <span
+      className="absolute -right-1 -top-1 flex items-center justify-center rounded-full border-2 border-[#1b1b1d] font-bold leading-none text-white"
+      style={{ height: h, minWidth: h, paddingInline: h * 0.2, fontSize: h * 0.52, background: LATE }}
+    >
+      {value}
+    </span>
   );
 }
 
