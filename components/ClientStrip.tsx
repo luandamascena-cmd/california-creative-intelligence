@@ -6,8 +6,7 @@ import { Maximize2, X } from "lucide-react";
 import { DemandItem, sortByUrgency } from "./charts/PersonDemands";
 import type { DrillRequest } from "./charts/types";
 import { isLate } from "@/lib/analytics";
-import { clientLogo } from "@/lib/clients";
-import { initials } from "@/lib/people";
+import { ClientMark } from "./ClientMark";
 import { LATE } from "./theme";
 import { useFitGrid } from "./useFitGrid";
 import { CountBadge, LateBadge } from "./charts/operation";
@@ -54,7 +53,6 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
         <ul className="grid gap-y-3" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, columnGap: fit.gap }}>
           {clients.map((c) => {
             const sel = c.name === current;
-            const logo = clientLogo(c.name);
             return (
               <li key={c.name}>
                 <button
@@ -65,19 +63,11 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
                   className={`group flex w-full flex-col items-center rounded-2xl px-1 py-2 transition ${sel ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"}`}
                 >
                   <span className="relative">
-                    <span
-                      style={{ width: fit.circle, height: fit.circle }}
-                      className={`flex items-center justify-center overflow-hidden rounded-full transition ${
-                        sel ? "ring-2 ring-clf-red ring-offset-2 ring-offset-[#1b1b1d]" : "ring-1 ring-white/15 group-hover:ring-white/35"
-                      } ${logo ? "bg-paper" : "bg-gradient-to-br from-white/[0.14] to-white/[0.04]"}`}
-                    >
-                      {logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logo} alt={c.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="display text-paper" style={{ fontSize: fit.circle * 0.34 }}>{initials(c.name)}</span>
-                      )}
-                    </span>
+                    <ClientMark
+                      name={c.name}
+                      size={fit.circle}
+                      className={`transition duration-200 ${sel ? "ring-2 ring-clf-red ring-offset-2 ring-offset-[#1b1b1d]" : "group-hover:scale-[1.04]"}`}
+                    />
                     <CountBadge value={c.open} size={fit.circle} />
                     {c.late > 0 && <LateBadge value={c.late} size={fit.circle} />}
                   </span>
