@@ -100,6 +100,8 @@ export interface Dataset {
   /** Valores oficiais da guia Listas, quando existe. */
   lists: Record<string, string[]>;
   refreshSeconds: number;
+  /** Fotos de perfil do e-mail corporativo, por nome normalizado do colaborador. */
+  photos?: Record<string, string>;
 }
 
 export interface DataResponse {

@@ -73,7 +73,7 @@ const quote = (title: string) => `'${title.replace(/'/g, "''")}'`;
  * Modo Apps Script: a própria planilha publica um app da web protegido por token
  * (apps-script/california-pauta.gs). Não exige projeto no Google Cloud.
  */
-async function fetchViaAppsScript(): Promise<{ title: string; sheets: RawSheet[] }> {
+async function fetchViaAppsScript(): Promise<Workbook> {
   const url = new URL(env.appsScriptUrl);
   url.searchParams.set("token", env.appsScriptToken);
   // O Apps Script pode demorar para "acordar"; uma nova tentativa cobre a maioria dos casos.
@@ -85,7 +85,7 @@ async function fetchViaAppsScript(): Promise<{ title: string; sheets: RawSheet[]
     res = await fetchWithTimeout(url.toString(), { redirect: "follow" }, 45_000);
   }
   const text = await res.text();
-  let json: { ok?: boolean; error?: string; title?: string; sheets?: RawSheet[] };
+  let json: { ok?: boolean; error?: string; title?: string; sheets?: RawSheet[]; people?: DirectoryPerson[] };
   try {
     json = JSON.parse(text);
   } catch {
@@ -94,11 +94,24 @@ async function fetchViaAppsScript(): Promise<{ title: string; sheets: RawSheet[]
     );
   }
   if (!res.ok || !json.ok || !json.sheets) throw new Error(`Apps Script: ${json.error ?? `erro ${res.status}`}.`);
-  return { title: json.title ?? "Planilha", sheets: json.sheets };
+  return { title: json.title ?? "Planilha", sheets: json.sheets, people: Array.isArray(json.people) ? json.people : [] };
 }
 
 /** Lê o nome da planilha, descobre as guias e baixa todas as relevantes em uma única chamada. */
-export async function fetchWorkbook(): Promise<{ title: string; sheets: RawSheet[] }> {
+/** Pessoa do diretório do Google Workspace com foto de perfil (vem do Apps Script). */
+export interface DirectoryPerson {
+  name: string;
+  email: string;
+  photo: string;
+}
+
+export interface Workbook {
+  title: string;
+  sheets: RawSheet[];
+  people?: DirectoryPerson[];
+}
+
+export async function fetchWorkbook(): Promise<Workbook> {
   if (sheetsAuthMode() === "apps-script") return fetchViaAppsScript();
   if (!env.spreadsheetId) throw new Error("GOOGLE_SHEETS_ID não configurado.");
   const meta = await call<{ properties: { title: string }; sheets: { properties: { title: string } }[] }>(

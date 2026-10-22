@@ -20,6 +20,7 @@ import { colorMap } from "./theme";
 import { regionalName, tabLabel } from "@/lib/labels";
 import { filterByPeriod } from "@/lib/period";
 import { PeriodScope } from "./PeriodScope";
+import { setDirectoryPhotos } from "@/lib/people";
 
 const STORE = "ci-filters-v2";
 const KEYS = Object.keys(EMPTY_FILTERS) as (keyof Filters)[];
@@ -45,6 +46,8 @@ function readFilters(): Filters {
 
 export default function Dashboard() {
   const { data, state, error, refresh } = useDataset();
+  // Antes de desenhar os avatares: as fotos do e-mail corporativo chegam junto com os dados.
+  setDirectoryPhotos(data?.photos);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [ready, setReady] = useState(false);
   const [drill, setDrill] = useState<DrillRequest | null>(null);

@@ -242,7 +242,7 @@ export function Avatar({ name, size, selected }: { name: string; size: number; s
     >
       {src && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={name} width={size} height={size} className="h-full w-full object-cover" onError={() => setBroken(true)} />
+        <img src={src} alt={name} width={size} height={size} referrerPolicy="no-referrer" loading="lazy" className="h-full w-full object-cover" onError={() => setBroken(true)} />
       ) : (
         <span className="display text-paper" style={{ fontSize: size * 0.36 }}>
           {initials(name)}

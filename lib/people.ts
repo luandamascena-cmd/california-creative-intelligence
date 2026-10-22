@@ -12,9 +12,44 @@ export const personSlug = (name: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+/** Fotos vindas do e-mail corporativo (diretório do Google), carregadas junto com os dados. */
+let directoryPhotos: Record<string, string> = {};
+export function setDirectoryPhotos(map: Record<string, string> | undefined) {
+  directoryPhotos = map ?? {};
+}
+
+/** Foto local (public/brand/pessoas) tem prioridade; depois a do e-mail corporativo. */
 export function personPhoto(name: string): string | null {
   const slug = personSlug(name);
-  return PEOPLE_PHOTOS.includes(slug) ? `/brand/pessoas/${slug}.webp` : null;
+  if (PEOPLE_PHOTOS.includes(slug)) return `/brand/pessoas/${slug}.webp`;
+  return directoryPhotos[slug] ?? null;
+}
+
+/**
+ * Liga cada nome da pauta a uma pessoa do diretório. Os nomes nem sempre batem
+ * ("Paula Letícia Brandão Sereno" na pauta, "Paula Sereno" no Google), então a busca tenta,
+ * nesta ordem: nome igual, e-mail no padrão nome+sobrenome, e primeiro nome + um sobrenome em comum.
+ * Só aceita quando há um candidato único, para nunca trocar a foto de alguém.
+ */
+export function matchDirectoryPhotos(names: string[], people: { name: string; email: string; photo: string }[]): Record<string, string> {
+  const dir = people
+    .filter((p) => p.photo)
+    .map((p) => ({ ...p, slug: personSlug(p.name), tokens: personSlug(p.name).split("-").filter(Boolean), local: (p.email.split("@")[0] ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") }));
+  const out: Record<string, string> = {};
+  for (const name of names) {
+    const slug = personSlug(name);
+    const t = slug.split("-").filter(Boolean);
+    if (!t.length) continue;
+    const pick = (list: typeof dir) => (list.length === 1 ? list[0].photo : null);
+    const combos = new Set(t.slice(1).map((x) => t[0] + x));
+    if (t.length === 1) combos.add(t[0]);
+    const found =
+      pick(dir.filter((d) => d.slug === slug)) ??
+      pick(dir.filter((d) => combos.has(d.local))) ??
+      pick(dir.filter((d) => d.tokens[0] === t[0] && d.tokens.slice(1).some((x) => t.slice(1).includes(x))));
+    if (found) out[slug] = found;
+  }
+  return out;
 }
 
 export function initials(name: string) {

@@ -65,9 +65,56 @@ function doGet(e) {
       return { title: sh.getName(), values: values, links: ciLinks_(sh, values) };
     });
 
-  var corpo = JSON.stringify({ ok: true, title: ss.getName(), sheets: sheets });
+  var corpo = JSON.stringify({ ok: true, title: ss.getName(), sheets: sheets, people: ciPessoas_() });
   if (corpo.length < 95000) cache.put('ci-pauta', corpo, 15);
   return ContentService.createTextOutput(corpo).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Fotos de perfil do diretório do Google Workspace (a mesma do e-mail corporativo).
+ * Exige o serviço avançado "People API" ativado no editor (Serviços > People API).
+ * Sem o serviço, devolve lista vazia e a dashboard segue com as iniciais.
+ */
+function ciPessoas_() {
+  var cache = CacheService.getScriptCache();
+  var guardado = cache.get('ci-pessoas');
+  if (guardado) return JSON.parse(guardado);
+  var lista = [];
+  try {
+    var token;
+    do {
+      var r = People.People.listDirectoryPeople({
+        readMask: 'names,emailAddresses,photos',
+        sources: ['DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE'],
+        pageSize: 1000,
+        pageToken: token,
+      });
+      (r.people || []).forEach(function (p) {
+        var foto = (p.photos || []).filter(function (f) { return !f.default; })[0];
+        if (!foto) return;
+        lista.push({
+          name: p.names && p.names[0] ? p.names[0].displayName : '',
+          email: p.emailAddresses && p.emailAddresses[0] ? p.emailAddresses[0].value : '',
+          photo: foto.url.replace(/=s\d+(-c)?$/, '=s256-c'),
+        });
+      });
+      token = r.nextPageToken;
+    } while (token);
+  } catch (err) {
+    console.log('Fotos indisponíveis: ' + err);
+    return [];
+  }
+  var json = JSON.stringify(lista);
+  if (json.length < 95000) cache.put('ci-pessoas', json, 21600);
+  return lista;
+}
+
+/** Rode uma vez no editor para autorizar e conferir quantas fotos o diretório devolve. */
+function testarFotos() {
+  CacheService.getScriptCache().remove('ci-pessoas');
+  var lista = ciPessoas_();
+  console.log(lista.length + ' pessoas com foto');
+  lista.slice(0, 5).forEach(function (p) { console.log(p.name + ' <' + p.email + '>'); });
 }
 
 /* ---------- 3. Aviso de edição ---------- */

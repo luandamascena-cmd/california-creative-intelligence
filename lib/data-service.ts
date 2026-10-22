@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { env, sheetsAuthMode } from "./env";
 import { fetchWorkbook } from "./google";
 import { normalizeWorkbook } from "./normalize";
+import { matchDirectoryPhotos } from "./people";
 import type { Dataset, DataResponse } from "./types";
 import snapshot from "@/data/demo-snapshot.json";
 
@@ -18,6 +19,7 @@ async function build(): Promise<Dataset> {
   const wb = demo
     ? { title: snapshot.spreadsheetTitle, sheets: snapshot.sheets as { title: string; values: string[][] }[] }
     : await fetchWorkbook();
+  const people = "people" in wb ? (wb.people ?? []) : [];
   const now = new Date();
   const result = normalizeWorkbook(wb.sheets, now);
   const version = createHash("sha1")
@@ -32,6 +34,7 @@ async function build(): Promise<Dataset> {
     spreadsheetTitle: wb.title,
     refreshSeconds: env.refreshSeconds,
     ...result,
+    photos: matchDirectoryPhotos([...new Set(result.demands.flatMap((d) => d.people))], people),
   };
 }
 
