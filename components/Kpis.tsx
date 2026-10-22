@@ -180,13 +180,18 @@ function StatusSummary({ rows, onStatus }: { rows: Demand[]; onStatus: (status: 
 }
 
 /** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
-export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void }) {
+export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, row }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void; /** Projetos, Status e Insights na mesma linha já a partir de telas médias (Panorama). */ row?: boolean }) {
   const withStatus = !!onStatus && caps.hasStatus;
+  const cols = !withStatus
+    ? "lg:grid-cols-[minmax(240px,300px)_1fr]"
+    : row
+      ? "md:grid-cols-[minmax(200px,240px)_1fr] xl:grid-cols-[190px_380px_minmax(0,1fr)]"
+      : "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]";
   return (
     <div className="space-y-4">
     <section
       aria-label="Resumo do recorte"
-      className={`grid gap-4 ${withStatus ? "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]" : "lg:grid-cols-[minmax(240px,300px)_1fr]"}`}
+      className={`grid gap-4 ${cols}`}
     >
       <div className="card relative flex flex-col justify-between overflow-hidden p-6" title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
         <div className="flex items-center justify-between gap-2">
@@ -201,7 +206,7 @@ export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill }:
         </div>
       </div>
       {withStatus && <StatusSummary rows={rows} onStatus={onStatus!} />}
-      <div className={withStatus ? "md:col-span-2 2xl:col-span-1" : "h-full"}>
+      <div className={!withStatus ? "h-full" : row ? "md:col-span-2 xl:col-span-1" : "md:col-span-2 2xl:col-span-1"}>
         <Insights rows={rows} today={today} compact trendRows={trendRows} />
       </div>
     </section>

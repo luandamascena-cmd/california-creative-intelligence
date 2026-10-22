@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Download, Info, Table2 } from "lucide-react";
 import { motion } from "motion/react";
 import type { EChartHandle } from "./EChart";
@@ -30,7 +30,10 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
   const ref = useRef<EChartHandle | null>(null);
   const [showTable, setShowTable] = useState(false);
   const [showDef, setShowDef] = useState(false);
-  const slug = `${code}-${title}`.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-");
+  const uid = useId();
+  const fileSlug = `${code}-${title}`.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-");
+  // id único: o mesmo gráfico aparece várias vezes no Panorama.
+  const slug = fileSlug + uid.replace(/[^a-zA-Z0-9]/g, "");
 
   return (
     <motion.section
@@ -59,7 +62,7 @@ export function ChartCard({ code, title, definition, className = "", actions, ta
               <Table2 size={14} />
             </IconBtn>
           )}
-          <IconBtn label="Exportar PNG" onClick={() => ref.current?.png(slug)}>
+          <IconBtn label="Exportar PNG" onClick={() => ref.current?.png(fileSlug)}>
             <Download size={14} />
           </IconBtn>
         </div>

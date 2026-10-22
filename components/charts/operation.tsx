@@ -112,7 +112,12 @@ export function PeopleChart({ rows, ctx, className }: ChartProps) {
 }
 
 /* 11 · Demandas por colaborador: foto, quantidade de abertas e, ao clicar, a lista ao lado */
-export function WorkloadChart({ rows, ctx, className }: ChartProps) {
+/**
+ * mode "lado" (padrão da dashboard): a primeira pessoa já aparece selecionada, com as demandas ao lado.
+ * mode "clique" (Panorama): nada aberto de início; clicar numa foto abre as demandas logo abaixo, como em Clientes em Pauta.
+ */
+export function WorkloadChart({ rows, ctx, className, mode = "lado" }: ChartProps & { mode?: "lado" | "clique" }) {
+  const onClick = mode === "clique";
   const open = useMemo(() => rows.filter((d) => d.isOpen), [rows]);
   const cats = useMemo(() => STATUS_ORDER.filter((c) => c !== "finalizado" && open.some((d) => d.statusCategory === c)), [open]);
   const people = useMemo(() => {
@@ -129,9 +134,10 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
     return [...m.entries()].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0])).map(([name, s]) => ({ name, ...s }));
   }, [open, ctx.today]);
   const [picked, setPicked] = useState<string | null>(null);
-  const current = picked && people.some((p) => p.name === picked) ? picked : people[0]?.name ?? null;
-  const { ref: box, wide } = useWide();
-  const fit = useFitGrid(people.length, { minItem: 104, gap: 12, maxCircle: 120 });
+  const current = picked && people.some((p) => p.name === picked) ? picked : onClick ? null : people[0]?.name ?? null;
+  const { ref: box, wide: wideBox } = useWide();
+  const wide = wideBox && !onClick;
+  const fit = useFitGrid(people.length, onClick ? { minItem: 92, gap: 8, maxCircle: 96 } : { minItem: 104, gap: 12, maxCircle: 120 });
   const mine = current ? open.filter((d) => d.people.includes(current)) : [];
 
   return (
@@ -166,7 +172,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
                 return (
                   <li key={p.name}>
                     <button
-                      onClick={() => setPicked(p.name)}
+                      onClick={() => setPicked(onClick && sel ? null : p.name)}
                       aria-pressed={sel}
                       title={`${p.name} · ${p.total} ${p.total === 1 ? "demanda aberta" : "demandas abertas"}${p.late ? ` · ${p.late} vencidas` : ""}`}
                       className="group flex w-full flex-col items-center rounded-2xl px-1 py-2 text-center transition hover:bg-white/[0.04]"
@@ -196,6 +202,7 @@ export function WorkloadChart({ rows, ctx, className }: ChartProps) {
               today={ctx.today}
               caption={mine.length === 1 ? "demanda aberta" : "demandas abertas"}
               onExpand={() => ctx.drill({ title: current, subtitle: "Demandas abertas do colaborador", rows: mine, apply: { person: current } })}
+              onClose={onClick ? () => setPicked(null) : undefined}
             />
           )}
         </div>

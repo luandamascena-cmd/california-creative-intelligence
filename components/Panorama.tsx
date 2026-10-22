@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Headline } from "./Kpis";
-import { WidgetGrid } from "./LayoutGrid";
-import type { Widget } from "@/lib/layout";
+import { PeriodScope } from "./PeriodScope";
+import { WorkloadChart } from "./charts/operation";
+import { TopClients } from "./charts/distribution";
 import type { ChartCtx, DrillRequest } from "./charts/types";
-import { applyFilters, CAT_LABEL, computeKpis, isLate, type Filters } from "@/lib/analytics";
+import { applyFilters, computeKpis, type Filters } from "@/lib/analytics";
 import { filterByPeriod } from "@/lib/period";
-import { computePressure, LEVEL_COLOR, LEVEL_LABEL, type Pressure } from "@/lib/pressure";
 import { regionalName } from "@/lib/labels";
+import { REGIONAL_PLACES } from "@/lib/regions";
 import { TEAM_LOGOS, teamKey, teamOrder } from "@/lib/teams";
 import type { Dataset, Demand, TabInfo } from "@/lib/types";
 
@@ -18,9 +19,6 @@ interface Props {
   filters: Filters;
   today: string;
   ctx: ChartCtx;
-  /** Mesmo layout da dashboard: cada seção replica o que se vê na dashboard daquele recorte. */
-  widgets: Widget[];
-  canEdit: boolean;
   onDrill: (r: DrillRequest) => void;
   onOpen: (regional: string, team: string | null) => void;
 }
@@ -41,15 +39,12 @@ interface Unit {
 }
 
 /**
- * Página longa que replica, em sequência, o que se vê na dashboard de cada recorte:
- * o consolidado (igual à Visão Geral), o comparativo e, em cada regional, a dashboard de cada time.
+ * Página longa com uma seção por regional e, dentro dela, um bloco enxuto por time:
+ * Projetos, Status e Insights; Clientes em Pauta; Demandas por Colaboradores e Top 10 Clientes.
  */
-export function Panorama({ data, filters, today, ctx, widgets, canEdit, onDrill, onOpen }: Props) {
+export function Panorama({ data, filters, today, ctx, onDrill, onOpen }: Props) {
   const scope = useMemo(() => ({ ...filters, regional: null, team: null }), [filters]);
   const all = data.demands;
-  const consolidatedBase = useMemo(() => applyFilters(all, scope), [all, scope]);
-  const consolidated = useMemo(() => filterByPeriod(consolidatedBase, filters.period, today), [consolidatedBase, filters.period, today]);
-  const kpis = useMemo(() => computeKpis(consolidated, today), [consolidated, today]);
 
   // Regionais na ordem das guias da planilha, como no menu lateral.
   const units: Unit[] = useMemo(() => {
@@ -57,15 +52,13 @@ export function Panorama({ data, filters, today, ctx, widgets, canEdit, onDrill,
     return codes.map((regional) => ({ regional, tabs: data.tabs.filter((t) => t.regional === regional).sort((a, b) => teamOrder(a.team) - teamOrder(b.team)) }));
   }, [data.tabs]);
 
-  const sections = [{ id: "consolidado", label: "Consolidado" }, { id: "matriz", label: "Comparativo" }, ...units.map((u) => ({ id: sectionId(u.regional), label: regionalName(u.regional) }))];
+  const sections = units.map((u) => ({ id: sectionId(u.regional), label: regionalName(u.regional) }));
   const active = useScrollSpy(sections.map((s) => s.id));
-
-  const consolidatedCtx = { ...ctx, filters: scope };
   const statusDrill = (rows: Demand[]) => (status: string) => onDrill({ title: status, subtitle: "Demandas por status", rows: rows.filter((d) => d.status === status), apply: { status } });
 
   return (
-    <div className="space-y-10">
-      <nav aria-label="Seções do Panorama" className="no-print sticky top-[68px] z-20 -mx-4 border-b border-white/[0.06] bg-ink/80 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6">
+    <div className="space-y-12">
+      <nav aria-label="Regionais do Panorama" className="no-print sticky top-[68px] z-20 -mx-4 border-b border-white/[0.06] bg-ink/80 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6">
         <ul className="flex gap-1.5 overflow-x-auto">
           {sections.map((s) => (
             <li key={s.id} className="shrink-0">
@@ -86,66 +79,47 @@ export function Panorama({ data, filters, today, ctx, widgets, canEdit, onDrill,
         </ul>
       </nav>
 
-      {/* Consolidado: o mesmo que a Visão Geral */}
-      <section id="consolidado" className="scroll-mt-[130px] space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <SectionTitle eyebrow="Todas as regionais e times" title="Consolidado" />
-          {canEdit && <span className="text-[11.5px] text-paper-faint">Os gráficos seguem o layout da dashboard. Para mudar, use Personalizar na Visão Geral.</span>}
-        </div>
-        <Headline k={kpis} caps={data.capabilities} rows={consolidated} trendRows={consolidatedBase} today={today} onStatus={statusDrill(consolidated)} onDrill={onDrill} />
-        <LazyMount estimate={estimateHeight(widgets)}>
-          <WidgetGrid widgets={widgets} editing={false} onChange={() => {}} bases={{ base: consolidatedBase, cross: consolidatedBase, ctx: consolidatedCtx, global: filters.period }} />
-        </LazyMount>
-      </section>
-
-      {/* Matriz comparativa */}
-      <section id="matriz" className="scroll-mt-[130px] space-y-4 border-t border-white/[0.08] pt-8">
-        <SectionTitle eyebrow="Quem está mais pressionado" title="Comparativo entre Regionais e Times" />
-        <Matrix units={units} base={consolidated} today={today} onJump={jumpTo} />
-      </section>
-
-      {/* Regionais */}
-      {units.map((u) => {
-        const rRows = consolidated.filter((d) => d.regional === u.regional);
-        const multi = u.tabs.length > 1;
-        return (
-          <section key={u.regional} id={sectionId(u.regional)} className="scroll-mt-[130px] space-y-5 border-t border-white/[0.08] pt-8">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <SectionTitle eyebrow={multi ? `Regional · ${u.tabs.length} times` : `Regional · ${u.tabs[0]?.team ?? ""}`} title={regionalName(u.regional)} big />
-              <button onClick={() => onOpen(u.regional, null)} className="inline-flex items-center gap-1 text-[12.5px] font-medium text-paper-dim hover:text-paper">
-                Abrir dashboard da regional <ArrowRight size={14} />
-              </button>
-            </div>
-            <MiniKpis rows={rRows} today={today} />
-            {u.tabs.map((t) => (
-              <TeamBlock
-                key={t.title}
-                tab={t}
-                caps={data.capabilities}
-                onStatus={(rows) => statusDrill(rows)}
-                widgets={widgets}
-                all={all}
-                scope={scope}
-                filters={filters}
-                today={today}
-                ctx={ctx}
-                cross={consolidatedBase}
-                onOpen={() => onOpen(u.regional, t.team)}
-              />
-            ))}
-          </section>
-        );
-      })}
+      {units.map((u) => (
+        <section key={u.regional} id={sectionId(u.regional)} className="scroll-mt-[118px] space-y-5">
+          <RegionalBand regional={u.regional} teams={u.tabs.map((t) => t.team)} onOpen={() => onOpen(u.regional, null)} />
+          {u.tabs.map((t) => (
+            <TeamBlock key={t.title} tab={t} caps={data.capabilities} onStatus={statusDrill} all={all} scope={scope} filters={filters} today={today} ctx={ctx} onOpen={() => onOpen(u.regional, t.team)} />
+          ))}
+        </section>
+      ))}
     </div>
   );
 }
 
-function SectionTitle({ eyebrow, title, big }: { eyebrow: string; title: string; big?: boolean }) {
+/**
+ * Faixa de abertura de cada regional: foto da cidade desfocada ocupando toda a largura,
+ * só atrás do nome, para marcar a troca de regional sem pesar sobre os gráficos.
+ */
+function RegionalBand({ regional, teams, onOpen }: { regional: string; teams: string[]; onOpen: () => void }) {
+  const photo = REGIONAL_PLACES[regional]?.photos[0];
   return (
-    <div>
-      <p className="eyebrow">{eyebrow}</p>
-      <h2 className={`display mt-1 leading-none text-paper ${big ? "text-[40px] sm:text-[48px]" : "text-[28px]"}`}>{title}</h2>
-    </div>
+    <header className="relative -mx-4 overflow-hidden border-y border-white/[0.08] sm:-mx-6">
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photo.src} alt="" aria-hidden draggable={false} className="absolute inset-0 h-full w-full scale-110 select-none object-cover" style={{ objectPosition: photo.position ?? "50% 50%", filter: "blur(14px) saturate(125%)" }} />
+      )}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          background: photo
+            ? "radial-gradient(ellipse 60% 90% at 50% 50%, rgba(231,16,61,0.18) 0%, rgba(231,16,61,0) 70%), linear-gradient(rgba(11,11,12,0.55), rgba(11,11,12,0.7))"
+            : "radial-gradient(ellipse 60% 120% at 50% 50%, rgba(231,16,61,0.22) 0%, rgba(231,16,61,0) 70%), #121214",
+        }}
+      />
+      <div className="relative flex flex-col items-center justify-center px-4 py-9 text-center sm:py-11">
+        <p className="eyebrow text-paper-dim">{teams.length > 1 ? `Regional · ${teams.join(" e ")}` : `Regional · ${teams[0] ?? ""}`}</p>
+        <h2 className="display mt-1.5 text-[52px] leading-none text-paper sm:text-[72px]">{regionalName(regional)}</h2>
+        <button onClick={onOpen} className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-medium text-paper-dim hover:text-paper">
+          Abrir dashboard da regional <ArrowRight size={14} />
+        </button>
+      </div>
+    </header>
   );
 }
 
@@ -153,13 +127,11 @@ function TeamBlock(p: {
   tab: TabInfo;
   caps: Dataset["capabilities"];
   onStatus: (rows: Demand[]) => (status: string) => void;
-  widgets: Widget[];
   all: Demand[];
   scope: Filters;
   filters: Filters;
   today: string;
   ctx: ChartCtx;
-  cross: Demand[];
   onOpen: () => void;
 }) {
   const { tab } = p;
@@ -167,9 +139,10 @@ function TeamBlock(p: {
   const base = useMemo(() => applyFilters(p.all, teamFilters), [p.all, teamFilters]);
   const rows = useMemo(() => filterByPeriod(base, p.filters.period, p.today), [base, p.filters.period, p.today]);
   const kpis = useMemo(() => computeKpis(rows, p.today), [rows, p.today]);
+  const ctx = useMemo(() => ({ ...p.ctx, filters: teamFilters }), [p.ctx, teamFilters]);
   const logo = TEAM_LOGOS[teamKey(tab.team)];
   return (
-    <div id={sectionId(tab.regional, tab.team)} className="scroll-mt-[130px] space-y-4 rounded-[28px] border border-white/[0.06] bg-white/[0.015] p-4 sm:p-5">
+    <div id={sectionId(tab.regional, tab.team)} className="scroll-mt-[118px] space-y-4 rounded-[28px] border border-white/[0.06] bg-white/[0.015] p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex h-[34px] items-center">
           {logo ? (
@@ -184,16 +157,17 @@ function TeamBlock(p: {
         </button>
       </div>
       {tab.rows === 0 ? (
-        <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">
-          Pauta ainda sem registros. Os gráficos de {tab.team} aparecem assim que a primeira linha da guia for preenchida.
-        </p>
+        <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">Pauta ainda sem registros. Os indicadores de {tab.team} aparecem assim que a primeira linha da guia for preenchida.</p>
       ) : !rows.length ? (
         <p className="card px-6 py-8 text-center text-[13px] text-paper-mute">Nenhuma demanda de {tab.team} no filtro atual.</p>
       ) : (
         <>
-          <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} onDrill={p.ctx.drill} />
-          <LazyMount estimate={estimateHeight(p.widgets)}>
-            <WidgetGrid widgets={p.widgets} editing={false} onChange={() => {}} bases={{ base, cross: p.cross, ctx: { ...p.ctx, filters: teamFilters }, global: p.filters.period }} />
+          <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} onDrill={p.ctx.drill} row />
+          <LazyMount estimate={460}>
+            <div className="grid grid-cols-12 gap-4">
+              <PeriodScope base={base} ctx={ctx} global={p.filters.period} render={(r) => <WorkloadChart rows={r} ctx={ctx} mode="clique" className="col-span-12 lg:col-span-8" />} />
+              <PeriodScope Chart={TopClients} base={base} ctx={ctx} global={p.filters.period} className="col-span-12 lg:col-span-4" />
+            </div>
           </LazyMount>
         </>
       )}
@@ -201,132 +175,9 @@ function TeamBlock(p: {
   );
 }
 
-/* ---------- Indicadores compactos ---------- */
-
-function MiniKpis({ rows, today, compact }: { rows: Demand[]; today: string; compact?: boolean }) {
-  const pr = computePressure(rows, today);
-  const people = new Set(rows.filter((d) => d.isOpen).flatMap((d) => d.people)).size;
-  const items: [string, number, boolean?][] = [
-    ["Demandas", rows.length],
-    ["Abertas", pr.open],
-    ["Atrasadas", pr.late, pr.late > 0],
-    ["Em 7 dias", pr.dueSoon],
-    ["Travadas", pr.blocked],
-    ["Pessoas", people],
-  ];
-  return (
-    <div className={`card flex flex-wrap items-center gap-x-8 gap-y-3 ${compact ? "px-5 py-3" : "px-6 py-4"}`}>
-      {items.map(([label, value, alert]) => (
-        <div key={label} className="min-w-[72px]">
-          <span className={`display block leading-none ${compact ? "text-[26px]" : "text-[32px]"}`} style={{ color: alert ? "#E7103D" : "#FFFBF0" }}>
-            {value}
-          </span>
-          <span className="mt-1 block text-[11px] text-paper-mute">{label}</span>
-        </div>
-      ))}
-      <span className="ml-auto flex items-center gap-1.5 text-[12.5px]" style={{ color: pr.level === "sem-dados" ? "#8F8D88" : LEVEL_COLOR[pr.level] }} title={pr.reasons.join("; ") || undefined}>
-        <span className="h-2 w-2 rounded-full" style={{ background: LEVEL_COLOR[pr.level] }} />
-        {LEVEL_LABEL[pr.level]}
-      </span>
-    </div>
-  );
-}
-
-/* ---------- Matriz comparativa ---------- */
-
-interface MatrixRow {
-  id: string;
-  label: string;
-  sub?: boolean;
-  total: boolean;
-  rows: Demand[];
-  pressure: Pressure;
-}
-
-function Matrix({ units, base, today, onJump }: { units: Unit[]; base: Demand[]; today: string; onJump: (id: string) => void }) {
-  const list: MatrixRow[] = [];
-  units.forEach((u) => {
-    const rRows = base.filter((d) => d.regional === u.regional);
-    const multi = u.tabs.length > 1;
-    list.push({ id: sectionId(u.regional), label: multi ? regionalName(u.regional) : `${regionalName(u.regional)} · ${u.tabs[0].team}`, total: multi, rows: rRows, pressure: computePressure(rRows, today) });
-    if (multi)
-      u.tabs.forEach((t) => {
-        const tRows = rRows.filter((d) => d.sourceTab === t.title);
-        list.push({ id: sectionId(u.regional, t.team), label: t.team, sub: true, total: false, rows: tRows, pressure: computePressure(tRows, today) });
-      });
-  });
-  const cols = ["Demandas", "Abertas", "Atrasadas", "Em 7 dias", "Travadas", "Pessoas", "Clientes"];
-  const values = (r: MatrixRow) => [
-    r.rows.length,
-    r.pressure.open,
-    r.pressure.late,
-    r.pressure.dueSoon,
-    r.pressure.blocked,
-    new Set(r.rows.filter((d) => d.isOpen).flatMap((d) => d.people)).size,
-    new Set(r.rows.map((d) => d.client)).size,
-  ];
-  return (
-    <div className="card overflow-x-auto p-2 sm:p-3">
-      <table className="w-full min-w-[760px] text-left text-[13px]">
-        <thead>
-          <tr className="text-[11px] uppercase tracking-wide text-paper-mute">
-            <th className="px-3 py-2.5 font-medium">Regional e time</th>
-            {cols.map((c) => (
-              <th key={c} className="px-3 py-2.5 text-right font-medium">
-                {c}
-              </th>
-            ))}
-            <th className="px-3 py-2.5 font-medium">Pressão</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((r) => {
-            const v = values(r);
-            const c = LEVEL_COLOR[r.pressure.level];
-            return (
-              <tr key={r.id} onClick={() => onJump(r.id)} className={`cursor-pointer border-t border-white/[0.07] transition hover:bg-white/[0.05] ${r.total ? "bg-white/[0.025]" : ""}`}>
-                <td className={`px-3 py-2.5 ${r.sub ? "pl-8 text-paper-dim" : "font-semibold text-paper"}`}>{r.label}</td>
-                {v.map((n, i) => (
-                  <td key={i} className={`px-3 py-2.5 text-right tabular-nums ${i === 2 && n > 0 ? "text-clf-red" : r.sub ? "text-paper-dim" : "text-paper"}`}>
-                    {n}
-                  </td>
-                ))}
-                <td className="px-3 py-2.5">
-                  <span className="flex items-center gap-2">
-                    <span className="block h-1.5 w-16 overflow-hidden rounded-full bg-white/[0.08]">
-                      <span className="block h-full rounded-full" style={{ width: `${Math.max(r.pressure.total ? 4 : 0, r.pressure.index * 100)}%`, background: c }} />
-                    </span>
-                    <span className="text-[12px]" style={{ color: r.pressure.level === "sem-dados" ? "#8F8D88" : c }}>
-                      {LEVEL_LABEL[r.pressure.level]}
-                    </span>
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /* ---------- Utilitários ---------- */
 
-/** Só monta os gráficos quando a seção se aproxima da tela: a página fica leve mesmo com dezenas de gráficos. */
-/** Altura aproximada da grade, para a página não "pular" quando os gráficos montam. */
-function estimateHeight(widgets: { span: number }[]) {
-  let rows = 0;
-  let used = 12;
-  widgets.forEach((w) => {
-    if (used + w.span > 12) {
-      rows++;
-      used = 0;
-    }
-    used += w.span;
-  });
-  return rows * 440 + Math.max(0, rows - 1) * 16;
-}
-
+/** Só monta os gráficos quando a seção se aproxima da tela: a página fica leve mesmo com várias regionais. */
 function LazyMount({ children, estimate }: { children: React.ReactNode; estimate: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState(false);

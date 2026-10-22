@@ -306,8 +306,6 @@ export default function Dashboard() {
               filters={filters}
               today={today}
               ctx={ctx}
-              widgets={shared.layout.dashboard}
-              canEdit={shared.canEdit && !presenting}
               onDrill={setDrill}
               onOpen={(r, t) => navigate(r, t)}
             />

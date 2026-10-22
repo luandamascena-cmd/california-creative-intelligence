@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Maximize2 } from "lucide-react";
+import { ExternalLink, Maximize2, X } from "lucide-react";
 import { STATUS_COLORS, LATE } from "../theme";
 import { isLate } from "@/lib/analytics";
 import { diffDays } from "@/lib/text";
@@ -40,10 +40,12 @@ interface Props {
   today: string;
   caption: string;
   onExpand: () => void;
+  /** Mostra o botão de fechar (modo em que a lista abre ao clicar). */
+  onClose?: () => void;
 }
 
 /** Demandas de um colaborador, dentro do próprio gráfico: sem abrir painel nem janela. */
-export function PersonDemands({ name, rows, today, caption, onExpand }: Props) {
+export function PersonDemands({ name, rows, today, caption, onExpand, onClose }: Props) {
   const list = sortByUrgency(rows);
   const late = rows.filter((d) => isLate(d, today)).length;
   return (
@@ -61,9 +63,16 @@ export function PersonDemands({ name, rows, today, caption, onExpand }: Props) {
             )}
           </p>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
         <button onClick={onExpand} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-paper-mute hover:bg-white/[0.08] hover:text-paper" title="Ver todos os campos das demandas" aria-label="Ver todos os campos das demandas">
           <Maximize2 size={13} />
         </button>
+        {onClose && (
+          <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-paper-mute hover:bg-white/[0.08] hover:text-paper" aria-label="Fechar">
+            <X size={14} />
+          </button>
+        )}
+        </div>
       </header>
       <ul className="max-h-[420px] divide-y divide-white/[0.06] overflow-y-auto">
         {list.map((d) => (
