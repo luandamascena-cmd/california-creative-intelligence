@@ -61,8 +61,7 @@ export const DEFAULT_LAYOUT: SharedLayout = {
   dashboard: [
     w("clients", 5), w("bu", 4), w("formats", 3),
     w("timeline", 12),
-    w("workload", 12),
-    w("people", 6), w("nature", 6),
+      w("people", 6), w("nature", 6),
     w("deadlines", 8), w("topClients", 4),
     w("regional", 3), w("projectsBu", 4), w("heatmap", 5),
     w("formatsBu", 6), w("priority", 6),

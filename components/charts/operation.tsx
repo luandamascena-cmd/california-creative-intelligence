@@ -213,7 +213,8 @@ export function WorkloadChart({ rows, ctx, className, mode = "lado" }: ChartProp
 
 /** Quantidade no canto inferior do círculo, proporcional ao tamanho dele. */
 export function CountBadge({ value, size }: { value: number; size: number }) {
-  const h = Math.round(Math.max(22, size * 0.34));
+  // Badges acompanham o círculo: em fileiras com muita gente, o círculo fica pequeno.
+  const h = Math.round(Math.max(Math.min(22, size * 0.5), size * 0.34));
   return (
     <span
       className="display absolute -bottom-1 -right-1 flex items-center justify-center rounded-full border-2 border-[#1b1b1d] bg-paper leading-none text-ink"
@@ -226,7 +227,7 @@ export function CountBadge({ value, size }: { value: number; size: number }) {
 
 /** Vencidas no canto superior do círculo. */
 export function LateBadge({ value, size }: { value: number; size: number }) {
-  const h = Math.round(Math.max(17, size * 0.24));
+  const h = Math.round(Math.max(Math.min(17, size * 0.4), size * 0.24));
   return (
     <span
       className="absolute -right-1 -top-1 flex items-center justify-center rounded-full border-2 border-[#1b1b1d] font-bold leading-none text-white"

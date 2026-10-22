@@ -9,6 +9,7 @@ import { EChart } from "./EChart";
 import { useMemo } from "react";
 import { Insights } from "./Insights";
 import { ClientStrip } from "./ClientStrip";
+import { PeopleStrip } from "./PeopleStrip";
 import type { DrillRequest } from "./charts/types";
 import type { Demand } from "@/lib/types";
 
@@ -211,6 +212,7 @@ export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, r
       </div>
     </section>
     <ClientStrip rows={rows} today={today} onDrill={onDrill} />
+    <PeopleStrip rows={rows} today={today} onDrill={onDrill} />
     </div>
   );
 }

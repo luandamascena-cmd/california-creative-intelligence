@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Headline } from "./Kpis";
 import { PeriodScope } from "./PeriodScope";
-import { WorkloadChart } from "./charts/operation";
 import { TopClients } from "./charts/distribution";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, computeKpis, type Filters } from "@/lib/analytics";
@@ -40,7 +39,7 @@ interface Unit {
 
 /**
  * Página longa com uma seção por regional e, dentro dela, um bloco enxuto por time:
- * Projetos, Status e Insights; Clientes em Pauta; Demandas por Colaboradores e Top 10 Clientes.
+ * Projetos, Status e Insights; Clientes em Pauta; Colaboradores em Pauta; Top 10 Clientes.
  */
 export function Panorama({ data, filters, today, ctx, onDrill, onOpen }: Props) {
   const scope = useMemo(() => ({ ...filters, regional: null, team: null }), [filters]);
@@ -163,11 +162,8 @@ function TeamBlock(p: {
       ) : (
         <>
           <Headline k={kpis} caps={p.caps} rows={rows} trendRows={base} today={p.today} onStatus={p.onStatus(rows)} onDrill={p.ctx.drill} row />
-          <LazyMount estimate={460}>
-            <div className="grid grid-cols-12 gap-4">
-              <PeriodScope base={base} ctx={ctx} global={p.filters.period} render={(r) => <WorkloadChart rows={r} ctx={ctx} mode="clique" className="col-span-12 lg:col-span-8" />} />
-              <PeriodScope Chart={TopClients} base={base} ctx={ctx} global={p.filters.period} className="col-span-12 lg:col-span-4" />
-            </div>
+          <LazyMount estimate={520}>
+            <PeriodScope Chart={TopClients} base={base} ctx={ctx} global={p.filters.period} />
           </LazyMount>
         </>
       )}
