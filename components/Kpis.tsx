@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, Minus } from "lucide-react
 import { AnimatedNumber } from "./AnimatedNumber";
 import { CAT_LABEL, fmtPct, type Kpis } from "@/lib/analytics";
 import type { Capabilities, StatusCategory } from "@/lib/types";
-import { C, LATE, STATUS_COLORS, STATUS_ORDER, tooltipBase } from "./theme";
+import { C, CATEGORICAL, LATE, OTHER, STATUS_COLORS, STATUS_ORDER, axisLabel, tooltipBase } from "./theme";
 import { EChart } from "./EChart";
 import { useMemo } from "react";
 import { Insights } from "./Insights";
@@ -180,13 +180,123 @@ function StatusSummary({ rows, onStatus }: { rows: Demand[]; onStatus: (status: 
   );
 }
 
+function useStatusData(rows: Demand[]) {
+  return useMemo(() => {
+    const m = new Map<string, { n: number; cat: StatusCategory }>();
+    rows.forEach((d) => {
+      const s = m.get(d.status) ?? { n: 0, cat: d.statusCategory };
+      s.n++;
+      m.set(d.status, s);
+    });
+    return [...m.entries()].map(([name, s]) => ({ name, ...s })).sort((a, b) => STATUS_ORDER.indexOf(a.cat) - STATUS_ORDER.indexOf(b.cat));
+  }, [rows]);
+}
+
+/** Status em colunas verticais (Panorama): uma torre por status, com o número em cima. */
+function StatusBars({ rows, onStatus }: { rows: Demand[]; onStatus: (status: string) => void }) {
+  const data = useStatusData(rows);
+  const total = rows.length;
+  const option = useMemo(
+    () => ({
+      grid: { left: 2, right: 2, top: 22, bottom: 2, containLabel: true },
+      tooltip: { ...tooltipBase, trigger: "item", formatter: (p: { name: string; value: number }) => `<b>${p.name}</b><br/>${p.value} demandas · ${fmtPct(p.value, total)}` },
+      xAxis: {
+        type: "category",
+        data: data.map((d) => d.name),
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: C.line } },
+        axisLabel: { ...axisLabel, color: C.dim, interval: 0, fontSize: 10.5, width: 64, overflow: "break", lineHeight: 12 },
+      },
+      yAxis: { type: "value", show: false },
+      series: [
+        {
+          type: "bar",
+          barMaxWidth: 34,
+          data: data.map((d) => ({ value: d.n, itemStyle: { color: STATUS_COLORS[d.cat], borderRadius: [4, 4, 0, 0] } })),
+          label: { show: true, position: "top", color: C.paper, fontFamily: "Antonio", fontSize: 15 },
+        },
+      ],
+    }),
+    [data, total],
+  );
+  return (
+    <div className="card flex flex-col p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-[14px] font-semibold text-paper">Status das Demandas</h2>
+        <span className="text-[11px] tabular-nums text-paper-faint">{total} no total</span>
+      </div>
+      <div className="mt-2 flex-1">
+        <EChart option={option} height={150} ariaLabel="Demandas por status, em colunas" onClick={(e) => onStatus(e.name)} />
+      </div>
+    </div>
+  );
+}
+
+/** Tipos de demanda (coluna Tipo de projeto) em rosca, no mesmo formato do status. */
+function TypeDonut({ rows, onDrill }: { rows: Demand[]; onDrill?: (r: DrillRequest) => void }) {
+  const data = useMemo(() => {
+    const m = new Map<string, number>();
+    rows.forEach((d) => {
+      const t = d.projectType?.trim() || "Sem tipo";
+      m.set(t, (m.get(t) ?? 0) + 1);
+    });
+    return [...m.entries()]
+      .sort((a, b) => (a[0] === "Sem tipo" ? 1 : b[0] === "Sem tipo" ? -1 : b[1] - a[1]))
+      .map(([name, n], i) => ({ name, n, color: name === "Sem tipo" ? OTHER : CATEGORICAL[i % CATEGORICAL.length] }));
+  }, [rows]);
+  const total = rows.length;
+  const drill = (name: string) =>
+    onDrill?.({ title: name, subtitle: "Demandas por tipo", rows: rows.filter((d) => (d.projectType?.trim() || "Sem tipo") === name), apply: name === "Sem tipo" ? undefined : { projectType: name } });
+  const option = useMemo(
+    () => ({
+      tooltip: { ...tooltipBase, trigger: "item", formatter: (p: { name: string; value: number }) => `<b>${p.name}</b><br/>${p.value} demandas · ${fmtPct(p.value, total)}` },
+      series: [
+        {
+          type: "pie",
+          radius: ["66%", "90%"],
+          padAngle: 2,
+          itemStyle: { borderRadius: 4, borderColor: C.card, borderWidth: 2 },
+          label: { show: false },
+          data: data.map((d) => ({ name: d.name, value: d.n, itemStyle: { color: d.color } })),
+        },
+      ],
+    }),
+    [data, total],
+  );
+  return (
+    <div className="card flex flex-col p-5">
+      <h2 className="text-[14px] font-semibold text-paper">Tipos de Demanda</h2>
+      <div className="mt-3 flex flex-1 items-center gap-3">
+        <div className="relative h-[112px] w-[112px] shrink-0">
+          <EChart option={option} height={112} ariaLabel="Distribuição das demandas por tipo" onClick={(e) => drill(e.name)} />
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="display text-[24px] leading-none text-paper">{total}</span>
+            <span className="text-[9.5px] text-paper-mute">demandas</span>
+          </div>
+        </div>
+        <ul className="min-w-0 flex-1 space-y-0.5">
+          {data.map((d) => (
+            <li key={d.name}>
+              <button onClick={() => drill(d.name)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[12px] hover:bg-white/[0.06]">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: d.color }} />
+                <span className="min-w-0 flex-1 truncate text-paper-dim">{d.name}</span>
+                <span className="tabular-nums text-paper">{d.n}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
 export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, row }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void; /** Projetos, Status e Insights na mesma linha já a partir de telas médias (Panorama). */ row?: boolean }) {
   const withStatus = !!onStatus && caps.hasStatus;
   const cols = !withStatus
     ? "lg:grid-cols-[minmax(240px,300px)_1fr]"
     : row
-      ? "md:grid-cols-[minmax(200px,240px)_1fr] xl:grid-cols-[190px_380px_minmax(0,1fr)]"
+      ? "md:grid-cols-2 xl:grid-cols-[150px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)]"
       : "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]";
   return (
     <div className="space-y-4">
@@ -194,21 +304,22 @@ export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, r
       aria-label="Resumo do recorte"
       className={`grid gap-4 ${cols}`}
     >
-      <div className="card relative flex flex-col justify-between overflow-hidden p-6" title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
+      <div className={`card relative flex flex-col justify-between overflow-hidden ${row ? "p-5" : "p-6"}`} title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow">Projetos</span>
           {!caps.hasProjectColumn && <span className="rounded border border-white/[0.12] px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">estimativa</span>}
         </div>
-        <div className="display mt-4 text-[88px] leading-none text-paper sm:text-[96px]">
+        <div className={`display mt-4 leading-none text-paper ${row ? "text-[72px]" : "text-[88px] sm:text-[96px]"}`}>
           <AnimatedNumber value={k.projects} />
         </div>
-        <div className="mt-3 text-[12.5px] text-paper-mute">
+        <div className={`mt-3 text-paper-mute ${row ? "text-[11.5px]" : "text-[12.5px]"}`}>
           {k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${k.demands === k.projects ? "demanda" : "demandas"} por projeto · ${k.demands} no total` : "sem dados no recorte"}
         </div>
       </div>
-      {withStatus && <StatusSummary rows={rows} onStatus={onStatus!} />}
-      <div className={!withStatus ? "h-full" : row ? "md:col-span-2 xl:col-span-1" : "md:col-span-2 2xl:col-span-1"}>
-        <Insights rows={rows} today={today} compact trendRows={trendRows} />
+      {withStatus && (row ? <StatusBars rows={rows} onStatus={onStatus!} /> : <StatusSummary rows={rows} onStatus={onStatus!} />)}
+      {withStatus && row && <TypeDonut rows={rows} onDrill={onDrill} />}
+      <div className={!withStatus ? "h-full" : row ? "h-full" : "md:col-span-2 2xl:col-span-1"}>
+        <Insights rows={rows} today={today} compact trendRows={trendRows} rotate={row} />
       </div>
     </section>
     <ClientStrip rows={rows} today={today} onDrill={onDrill} />
