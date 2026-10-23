@@ -211,7 +211,7 @@ function StatusBars({ rows, onStatus }: { rows: Demand[]; onStatus: (status: str
       series: [
         {
           type: "bar",
-          barMaxWidth: 34,
+          barMaxWidth: 44,
           data: data.map((d) => ({ value: d.n, itemStyle: { color: STATUS_COLORS[d.cat], borderRadius: [4, 4, 0, 0] } })),
           label: { show: true, position: "top", color: C.paper, fontFamily: "Antonio", fontSize: 15 },
         },
@@ -267,20 +267,21 @@ function TypeDonut({ rows, onDrill }: { rows: Demand[]; onDrill?: (r: DrillReque
     <div className="card flex flex-col p-5">
       <h2 className="text-[14px] font-semibold text-paper">Tipos de Demanda</h2>
       <div className="mt-3 flex flex-1 items-center gap-3">
-        <div className="relative h-[112px] w-[112px] shrink-0">
-          <EChart option={option} height={112} ariaLabel="Distribuição das demandas por tipo" onClick={(e) => drill(e.name)} />
+        <div className="relative h-[128px] w-[128px] shrink-0">
+          <EChart option={option} height={128} ariaLabel="Distribuição das demandas por tipo" onClick={(e) => drill(e.name)} />
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <span className="display text-[24px] leading-none text-paper">{total}</span>
             <span className="text-[9.5px] text-paper-mute">demandas</span>
           </div>
         </div>
-        <ul className="min-w-0 flex-1 space-y-0.5">
+        <ul className="min-w-0 max-w-[300px] flex-1 space-y-0.5">
           {data.map((d) => (
             <li key={d.name}>
               <button onClick={() => drill(d.name)} className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-[12px] hover:bg-white/[0.06]">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: d.color }} />
                 <span className="min-w-0 flex-1 truncate text-paper-dim">{d.name}</span>
                 <span className="tabular-nums text-paper">{d.n}</span>
+                <span className="w-10 text-right tabular-nums text-paper-mute">{fmtPct(d.n, total)}</span>
               </button>
             </li>
           ))}
@@ -291,12 +292,12 @@ function TypeDonut({ rows, onDrill }: { rows: Demand[]; onDrill?: (r: DrillReque
 }
 
 /** Abertura da página: projetos, status e, ao lado, os insights do recorte. */
-export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, row }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void; /** Projetos, Status e Insights na mesma linha já a partir de telas médias (Panorama). */ row?: boolean }) {
+export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, row }: { k: Kpis; caps: Capabilities; rows: Demand[]; today: string; onStatus?: (status: string) => void; trendRows?: Demand[]; onDrill?: (r: DrillRequest) => void; /** Panorama: Tipos de Demanda, Status em colunas e Insights rotativos, em três colunas iguais, sem o número de projetos. */ row?: boolean }) {
   const withStatus = !!onStatus && caps.hasStatus;
   const cols = !withStatus
     ? "lg:grid-cols-[minmax(240px,300px)_1fr]"
     : row
-      ? "md:grid-cols-2 xl:grid-cols-[150px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)]"
+      ? "md:grid-cols-2 lg:grid-cols-3"
       : "md:grid-cols-[minmax(220px,260px)_1fr] 2xl:grid-cols-[260px_400px_minmax(0,1fr)]";
   return (
     <div className="space-y-4">
@@ -304,21 +305,24 @@ export function Headline({ k, caps, rows, today, onStatus, trendRows, onDrill, r
       aria-label="Resumo do recorte"
       className={`grid gap-4 ${cols}`}
     >
-      <div className={`card relative flex flex-col justify-between overflow-hidden ${row ? "p-5" : "p-6"}`} title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
+      {/* No Panorama (row) o número de projetos sai: ficam Tipos, Status e Insights em três colunas iguais. */}
+      {!row && (
+      <div className="card relative flex flex-col justify-between overflow-hidden p-6" title="Projetos distintos. Sem coluna PROJETO, é uma estimativa por nome da tarefa e cliente.">
         <div className="flex items-center justify-between gap-2">
           <span className="eyebrow">Projetos</span>
           {!caps.hasProjectColumn && <span className="rounded border border-white/[0.12] px-1.5 py-px text-[9.5px] uppercase tracking-wide text-paper-mute">estimativa</span>}
         </div>
-        <div className={`display mt-4 leading-none text-paper ${row ? "text-[72px]" : "text-[88px] sm:text-[96px]"}`}>
+        <div className="display mt-4 text-[88px] leading-none text-paper sm:text-[96px]">
           <AnimatedNumber value={k.projects} />
         </div>
-        <div className={`mt-3 text-paper-mute ${row ? "text-[11.5px]" : "text-[12.5px]"}`}>
+        <div className="mt-3 text-[12.5px] text-paper-mute">
           {k.projects ? `${(k.demands / k.projects).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ${k.demands === k.projects ? "demanda" : "demandas"} por projeto · ${k.demands} no total` : "sem dados no recorte"}
         </div>
       </div>
-      {withStatus && (row ? <StatusBars rows={rows} onStatus={onStatus!} /> : <StatusSummary rows={rows} onStatus={onStatus!} />)}
+      )}
       {withStatus && row && <TypeDonut rows={rows} onDrill={onDrill} />}
-      <div className={!withStatus ? "h-full" : row ? "h-full" : "md:col-span-2 2xl:col-span-1"}>
+      {withStatus && (row ? <StatusBars rows={rows} onStatus={onStatus!} /> : <StatusSummary rows={rows} onStatus={onStatus!} />)}
+      <div className={!withStatus ? "h-full" : row ? "h-full md:col-span-2 lg:col-span-1" : "md:col-span-2 2xl:col-span-1"}>
         <Insights rows={rows} today={today} compact trendRows={trendRows} rotate={row} />
       </div>
     </section>
