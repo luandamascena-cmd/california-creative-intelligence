@@ -6,10 +6,13 @@ import { Sparkles } from "lucide-react";
 import { regionalName } from "@/lib/labels";
 import type { Demand } from "@/lib/types";
 
-interface Toast {
+export interface Toast {
   id: number;
   title: string;
   text: string;
+  /** Guia de origem: o Panorama Horizontal mostra o aviso dentro do cartão do time. */
+  tab: string;
+  kind: "new" | "status";
 }
 
 /** Identidade de uma demanda entre leituras (o id muda se a linha for movida na planilha). */
@@ -33,10 +36,16 @@ export function useSheetPulse(all: Demand[], version: string, live: boolean) {
     if (!added.length && !changed.length) return;
     const stamp = Date.now();
     const next: Toast[] = [];
-    if (added.length > 3) next.push({ id: stamp, title: `${added.length} demandas novas`, text: [...new Set(added.map((d) => `${regionalName(d.regional)} · ${d.team}`))].join(", ") });
-    else added.forEach((d, i) => next.push({ id: stamp + i, title: `Nova demanda em ${regionalName(d.regional)} · ${d.team}`, text: `${d.task} · ${d.client}` }));
-    changed.slice(0, 3).forEach((d, i) => next.push({ id: stamp + 10 + i, title: `${regionalName(d.regional)} · ${d.team}`, text: `${d.task} agora está em ${d.status}` }));
-    setToasts((t) => [...t, ...next].slice(-4));
+    const byTab = new Map<string, Demand[]>();
+    added.forEach((d) => byTab.set(d.sourceTab, [...(byTab.get(d.sourceTab) ?? []), d]));
+    let i = 0;
+    byTab.forEach((list, tab) => {
+      const d0 = list[0];
+      if (list.length > 2) next.push({ id: stamp + i++, tab, kind: "new", title: `${list.length} demandas novas em ${regionalName(d0.regional)} · ${d0.team}`, text: [...new Set(list.map((d) => d.client))].slice(0, 4).join(", ") });
+      else list.forEach((d) => next.push({ id: stamp + i++, tab, kind: "new", title: `Nova demanda em ${regionalName(d.regional)} · ${d.team}`, text: `${d.task} · ${d.client}` }));
+    });
+    changed.slice(0, 4).forEach((d, j) => next.push({ id: stamp + 100 + j, tab: d.sourceTab, kind: "status", title: `${regionalName(d.regional)} · ${d.team}`, text: `${d.task} agora está em ${d.status}` }));
+    setToasts((t) => [...t, ...next].slice(-8));
     next.forEach((t) => window.setTimeout(() => setToasts((list) => list.filter((x) => x.id !== t.id)), 8000));
     setFlash((f) => {
       const out = { ...f };
@@ -52,7 +61,7 @@ export function PulseToasts({ toasts, className = "right-6 top-24" }: { toasts: 
   return (
     <div className={`no-print pointer-events-none fixed z-50 flex w-[360px] flex-col gap-2 ${className}`}>
       <AnimatePresence>
-        {toasts.map((t) => (
+        {toasts.slice(-4).map((t) => (
           <motion.div
             key={t.id}
             layout

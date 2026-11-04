@@ -2,16 +2,17 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Lightbulb, RefreshCw, Sparkles } from "lucide-react";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { Avatar } from "./charts/operation";
 import { ClientMark } from "./ClientMark";
 import { useInsightItems } from "./Insights";
 import { PresentTicker } from "./PresentTicker";
-import { PulseToasts, useFlash, useSheetPulse } from "./SheetPulse";
+import { useFlash, useSheetPulse, type Toast } from "./SheetPulse";
 import { CATEGORICAL, LATE, OTHER, STATUS_COLORS, STATUS_ORDER } from "./theme";
 import { applyFilters, CAT_LABEL, isLate, type Filters } from "@/lib/analytics";
 import { filterByPeriod } from "@/lib/period";
+import { addDaysISO } from "@/lib/text";
 import { computePressure } from "@/lib/pressure";
 import { regionalName } from "@/lib/labels";
 import { shortName } from "@/lib/people";
@@ -37,6 +38,8 @@ interface Props {
  */
 export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen, presenting }: Props) {
   const live = !!presenting;
+  const reduce = useReducedMotion();
+  const motionOn = live && !reduce;
   const scope = useMemo(() => ({ ...filters, regional: null, team: null }), [filters]);
   const all = data.demands;
   const scoped = useMemo(() => applyFilters(all, scope), [all, scope]);
@@ -69,14 +72,82 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
     };
   }, [live]);
 
-  // Modo telão: um destaque percorre os cartões, um de cada vez.
-  const teamIds = useMemo(() => units.flatMap((u) => u.tabs.filter((t) => t.rows > 0).map((t) => t.title)), [units]);
-  const [spot, setSpot] = useState(0);
+  /* ---------- Modo telão ---------- */
+
+  // Holofote: percorre os times do mais pressionado ao mais tranquilo, pulando os vazios.
+  const stats = useMemo(() => {
+    const m = new Map<string, { rows: number; clients: number; index: number; open: number }>();
+    data.tabs.forEach((t) => {
+      const rows = periodRows.filter((d) => d.sourceTab === t.title);
+      const pr = computePressure(rows, today);
+      m.set(t.title, { rows: rows.length, clients: new Set(rows.filter((d) => d.isOpen).map((d) => d.client)).size, index: pr.index, open: pr.open });
+    });
+    return m;
+  }, [data.tabs, periodRows, today]);
+  const tour = useMemo(
+    () =>
+      data.tabs
+        .filter((t) => (stats.get(t.title)?.rows ?? 0) > 0)
+        .sort((a, b) => stats.get(b.title)!.index - stats.get(a.title)!.index || stats.get(b.title)!.open - stats.get(a.title)!.open)
+        .map((t) => t.title),
+    [data.tabs, stats],
+  );
+  const tourKey = tour.join("|");
+  const [spot, setSpot] = useState<string | null>(null);
+  const [headline, setHeadline] = useState<Headline | null>(null);
   useEffect(() => {
-    if (!live || teamIds.length < 2) return;
-    const id = window.setInterval(() => setSpot((i) => (i + 1) % teamIds.length), 8000);
+    if (!live || !tour.length) {
+      setSpot(null);
+      return;
+    }
+    if (!spot || !tour.includes(spot)) {
+      setSpot(tour[0]);
+      return;
+    }
+    if (headline) return;
+    // Com clientes há o que abrir no cartão: o holofote fica mais tempo.
+    const dur = (stats.get(spot)?.clients ?? 0) > 0 ? 11000 : 7000;
+    const t = window.setTimeout(() => setSpot(tour[(tour.indexOf(spot) + 1) % tour.length]), dur);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, spot, tourKey, headline]);
+
+  // Ciclo de leitura: a cada minuto uma faixa de luz varre a parede e os números recontam.
+  const SWEEP = 2.6;
+  const [cycle, setCycle] = useState(0);
+  useEffect(() => {
+    if (!motionOn) return;
+    setCycle((c) => c + 1);
+    const id = window.setInterval(() => setCycle((c) => c + 1), 60_000);
     return () => window.clearInterval(id);
-  }, [live, teamIds.length]);
+  }, [motionOn]);
+
+  // Manchete: de tempos em tempos, uma frase ocupa a parede inteira por alguns segundos.
+  const headlines = useMemo(() => buildHeadlines(scoped, today), [scoped, today]);
+  const hIdx = useRef(0);
+  // As frases ficam numa ref: cada leitura nova da planilha atualiza o texto sem reiniciar o cronômetro.
+  const hList = useRef(headlines);
+  hList.current = headlines;
+  useEffect(() => {
+    if (!motionOn) {
+      setHeadline(null);
+      return;
+    }
+    let hide = 0;
+    const show = () => {
+      const list = hList.current;
+      if (!list.length) return;
+      setHeadline(list[hIdx.current % list.length]);
+      hIdx.current++;
+      hide = window.setTimeout(() => setHeadline(null), 6500);
+    };
+    const id = window.setInterval(show, 150_000);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(hide);
+    };
+  }, [motionOn]);
+
   const { toasts, flash } = useSheetPulse(all, data.version, live);
 
   return (
@@ -84,7 +155,7 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
       <div
         ref={box}
         data-ph-grid
-        className="grid gap-3"
+        className="relative grid gap-3"
         style={{ height: height || undefined, gridTemplateColumns: `repeat(${units.length}, minmax(0, 1fr))` }}
       >
         {units.map((u, ui) => (
@@ -99,9 +170,14 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
                   base={scoped.filter((d) => d.sourceTab === t.title)}
                   today={today}
                   delay={ui * 0.12 + ti * 0.08}
-                  spotlight={live && teamIds[spot] === t.title}
+                  spotlight={live && spot === t.title}
+                  dimmed={live && !!spot && spot !== t.title && tour.length > 1}
                   flash={flash[t.title] ?? 0}
+                  toasts={live ? toasts.filter((x) => x.tab === t.title) : []}
+                  cycle={cycle}
+                  sweepDelay={((ui + 0.5) / units.length) * SWEEP}
                   live={live}
+                  motionOn={motionOn}
                   ctx={ctx}
                   onDrill={onDrill}
                   onOpen={() => onOpen(t.regional, t.team)}
@@ -110,14 +186,126 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
             </div>
           </section>
         ))}
+
+        {/* Faixa de luz do ciclo de leitura */}
+        {motionOn && cycle > 0 && (
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-[22px]">
+            <motion.div
+              key={cycle}
+              className="absolute inset-y-0 w-[16%]"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(231,16,61,0) 0%, rgba(231,16,61,0.07) 35%, rgba(255,251,240,0.10) 50%, rgba(231,16,61,0.07) 65%, rgba(231,16,61,0) 100%)",
+                mixBlendMode: "screen",
+              }}
+              initial={{ left: "-18%" }}
+              animate={{ left: "102%" }}
+              transition={{ duration: SWEEP, ease: [0.45, 0, 0.55, 1] }}
+            >
+              <span className="absolute inset-y-0 left-1/2 w-px bg-gradient-to-b from-transparent via-paper/40 to-transparent" />
+            </motion.div>
+          </div>
+        )}
+
+        <AnimatePresence>{headline && <HeadlineOverlay key={headline.text} h={headline} />}</AnimatePresence>
       </div>
-      {live && (
-        <>
-          <PresentTicker demands={all} today={today} syncedAt={data.syncedAt} paused={false} />
-          <PulseToasts toasts={toasts} className="right-6 top-20" />
-        </>
-      )}
+      {live && <PresentTicker demands={all} today={today} syncedAt={data.syncedAt} paused={!!headline} />}
     </>
+  );
+}
+
+/* ---------- Manchete ---------- */
+
+interface Headline {
+  tag: string;
+  text: string;
+  tone: "alert" | "warn" | "neutral";
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** Frases curtas, tiradas da pauta aberta, para a manchete do telão. */
+function buildHeadlines(rows: Demand[], today: string): Headline[] {
+  const open = rows.filter((d) => d.isOpen);
+  const out: Headline[] = [];
+  const tomorrow = addDaysISO(today, 1);
+  const byRegional = (list: Demand[]) => {
+    const m = new Map<string, number>();
+    list.forEach((d) => m.set(d.regional, (m.get(d.regional) ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  };
+  byRegional(open.filter((d) => d.due === today)).forEach(([r, n]) => out.push({ tag: "Entregas de hoje", text: `${regionalName(r)} tem ${plural(n, "entrega", "entregas")} hoje`, tone: "warn" }));
+  byRegional(open.filter((d) => d.due === tomorrow)).forEach(([r, n]) => out.push({ tag: "Amanhã", text: `${regionalName(r)} tem ${plural(n, "entrega", "entregas")} amanhã`, tone: "neutral" }));
+  const lateTeams = new Map<string, { r: string; t: string; n: number }>();
+  open
+    .filter((d) => isLate(d, today))
+    .forEach((d) => {
+      const k = d.sourceTab;
+      const cur = lateTeams.get(k) ?? { r: d.regional, t: d.team, n: 0 };
+      cur.n++;
+      lateTeams.set(k, cur);
+    });
+  [...lateTeams.values()]
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 2)
+    .forEach((x) => out.push({ tag: "Atenção", text: `${regionalName(x.r)} · ${x.t} tem ${plural(x.n, "demanda vencida", "demandas vencidas")}`, tone: "alert" }));
+  const week = addDaysISO(today, -7);
+  const entered = rows.filter((d) => d.start && d.start > week && d.start <= today).length;
+  if (entered) out.push({ tag: "Semana", text: `${plural(entered, "demanda entrou", "demandas entraram")} na pauta nos últimos 7 dias`, tone: "neutral" });
+  const clients = new Map<string, number>();
+  open.forEach((d) => clients.set(d.client, (clients.get(d.client) ?? 0) + 1));
+  const top = [...clients.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (top) out.push({ tag: "Destaque", text: `${top[0]} lidera a pauta aberta com ${plural(top[1], "demanda", "demandas")}`, tone: "neutral" });
+  const blocked = open.filter((d) => d.statusCategory === "travado").length;
+  if (blocked) out.push({ tag: "Travadas", text: `${plural(blocked, "demanda travada", "demandas travadas")} na pauta`, tone: "alert" });
+  const people = new Set(open.flatMap((d) => d.people)).size;
+  if (people) out.push({ tag: "Criação", text: `${plural(people, "pessoa da criação", "pessoas da criação")} com demandas em andamento`, tone: "neutral" });
+  return out;
+}
+
+function HeadlineOverlay({ h }: { h: Headline }) {
+  const words = h.text.split(" ");
+  const color = h.tone === "alert" ? LATE : h.tone === "warn" ? "#F5C451" : "#FFFBF0";
+  return (
+    <motion.div
+      role="status"
+      className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center rounded-[22px] text-center"
+      style={{ background: "radial-gradient(ellipse 60% 70% at 50% 50%, rgba(11,11,12,0.94) 0%, rgba(11,11,12,0.86) 60%, rgba(11,11,12,0.7) 100%)", backdropFilter: "blur(8px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.6 } }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.span
+        className="rounded-full border px-4 py-1 text-[clamp(12px,1.5vh,20px)] font-semibold uppercase tracking-wide2"
+        style={{ color, borderColor: `${color}55` }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+      >
+        {h.tag}
+      </motion.span>
+      <p className="display mt-[2.4vh] max-w-[78%] leading-[1.02] text-paper" style={{ fontSize: "clamp(44px, 9vh, 150px)" }}>
+        {words.map((w, i) => (
+          <motion.span
+            key={i}
+            className="inline-block"
+            style={{ marginRight: "0.24em" }}
+            initial={{ opacity: 0, y: "0.4em", filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ delay: 0.35 + i * 0.07, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {w}
+          </motion.span>
+        ))}
+      </p>
+      <motion.span
+        className="mt-[3vh] h-[3px] rounded-full bg-clf-red"
+        initial={{ width: 0 }}
+        animate={{ width: "18%" }}
+        transition={{ delay: 0.6, duration: 5.4, ease: "linear" }}
+      />
+    </motion.div>
   );
 }
 
@@ -186,8 +374,13 @@ function TeamTile(p: {
   today: string;
   delay: number;
   spotlight: boolean;
+  dimmed: boolean;
   flash: number;
+  toasts: Toast[];
+  cycle: number;
+  sweepDelay: number;
   live: boolean;
+  motionOn: boolean;
   ctx: ChartCtx;
   onDrill: (r: DrillRequest) => void;
   onOpen: () => void;
@@ -230,6 +423,18 @@ function TeamTile(p: {
     return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name, n]) => ({ name, n }));
   }, [open]);
 
+  // No holofote, o cartão abre sozinho os clientes mais carregados (até dois, alternando).
+  const [spotIdx, setSpotIdx] = useState(0);
+  const spotCount = Math.min(2, clients.length);
+  useEffect(() => {
+    setSpotIdx(0);
+    if (!p.spotlight || spotCount < 2) return;
+    const id = window.setInterval(() => setSpotIdx((i) => (i + 1) % spotCount), 5500);
+    return () => window.clearInterval(id);
+  }, [p.spotlight, spotCount]);
+  const spotClient = p.spotlight && spotCount ? clients[spotIdx % spotCount] : null;
+  const counting = { cycle: p.cycle, delay: p.sweepDelay, on: p.motionOn };
+
   const drillClient = (name: string) => p.onDrill({ title: name, subtitle: `Demandas abertas · ${label}`, rows: open.filter((d) => d.client === name), apply: { client: name } });
   const drillPerson = (name: string) => p.onDrill({ title: name, subtitle: `Demandas abertas · ${label}`, rows: open.filter((d) => d.people.includes(name)), apply: { person: name } });
   const drillStatus = (cat: StatusCategory) => p.onDrill({ title: CAT_LABEL[cat], subtitle: label, rows: rows.filter((d) => d.statusCategory === cat) });
@@ -240,10 +445,10 @@ function TeamTile(p: {
     <motion.article
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0, scale: p.spotlight ? 1.012 : 1 }}
-      transition={{ duration: 0.6, delay: p.delay, ease: [0.22, 1, 0.36, 1] }}
-      className={`relative flex min-h-0 flex-col overflow-hidden rounded-[22px] border bg-white/[0.025] transition-colors duration-700 ${
+      transition={{ opacity: { duration: 0.6, delay: p.delay }, y: { duration: 0.6, delay: p.delay, ease: [0.22, 1, 0.36, 1] }, scale: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
+      className={`relative flex min-h-0 flex-col overflow-hidden rounded-[22px] border bg-white/[0.025] transition-[filter,border-color,box-shadow] duration-700 ${
         p.spotlight ? "border-clf-red/70 shadow-[0_0_40px_rgba(231,16,61,0.18)]" : "border-white/[0.07]"
-      } ${flashing ? "ci-flash" : ""}`}
+      } ${p.dimmed && !p.toasts.length ? "brightness-[0.5] saturate-[0.6]" : ""} ${flashing ? "ci-flash" : ""}`}
       style={{ containerType: "size" }}
       aria-label={label}
     >
@@ -272,16 +477,16 @@ function TeamTile(p: {
             <div className="ph-left flex min-h-0 flex-col" style={{ gap: "calc(var(--u) * 2.6)" }}>
             {/* Régua de números */}
             <div className="grid shrink-0 grid-cols-4 border-y border-white/[0.07]" style={{ paddingBlock: "calc(var(--u) * 1.8)" }}>
-              <Metric label="Abertas" value={pr.open} />
-              <Metric label="Vencidas" value={pr.late} alert={pr.late > 0} />
-              <Metric label="Em 7 dias" value={pr.dueSoon} />
-              <Metric label="Travadas" value={pr.blocked} warn={pr.blocked > 0} />
+              <Metric label="Abertas" value={pr.open} {...counting} />
+              <Metric label="Vencidas" value={pr.late} alert={pr.late > 0} {...counting} />
+              <Metric label="Em 7 dias" value={pr.dueSoon} {...counting} />
+              <Metric label="Travadas" value={pr.blocked} warn={pr.blocked > 0} {...counting} />
             </div>
 
             {/* Tipos de Demanda e Status */}
             <div className="ph-mix grid shrink-0" style={{ gap: "calc(var(--u) * 3)" }}>
               <div className="flex min-w-0 items-center" style={{ gap: "calc(var(--u) * 2.2)" }}>
-                <Donut items={types} total={rows.length} delay={p.delay} onPick={drillType} />
+                <Donut items={types} total={rows.length} delay={p.delay} onPick={drillType} counting={counting} />
                 <ul className="min-w-0 flex-1" style={{ fontSize: "max(10px, calc(var(--u) * 2.1))" }}>
                   {types.slice(0, 5).map((t) => (
                     <li key={t.name}>
@@ -304,8 +509,8 @@ function TeamTile(p: {
                       key={s.cat}
                       onClick={() => drillStatus(s.cat)}
                       title={`${CAT_LABEL[s.cat]}: ${s.n}`}
-                      className="h-full"
-                      style={{ background: STATUS_COLORS[s.cat] }}
+                      className={`h-full ${p.motionOn && FLOWING.has(s.cat) ? "ph-flow" : ""}`}
+                      style={{ background: STATUS_COLORS[s.cat], ["--ph-d" as string]: `${((p.delay * 7) % 2.8).toFixed(2)}s` }}
                       initial={{ width: 0 }}
                       animate={{ width: `${(s.n / rows.length) * 100}%` }}
                       transition={{ duration: 0.9, delay: p.delay + 0.3 + i * 0.08, ease: [0.22, 1, 0.36, 1] }}
@@ -330,52 +535,114 @@ function TeamTile(p: {
 
             <div className="ph-right flex min-h-0 flex-col" style={{ gap: "calc(var(--u) * 2.6)" }}>
             {/* Clientes e colaboradores em pauta */}
-            <CircleRow title="Clientes em Pauta" empty="Nenhum cliente com demanda aberta" count={clients.length} max={8} delay={p.delay}>
-              {(size, n) =>
-                clients.slice(0, n).map((c) => (
-                  <button key={c.name} onClick={() => drillClient(c.name)} className="group flex min-w-0 flex-col items-center" title={`${c.name} · ${c.open} abertas${c.late ? ` · ${c.late} vencidas` : ""}`}>
-                    <span className="relative">
-                      <ClientMark name={c.name} size={size} className="transition group-hover:scale-105" />
-                      <Badge value={c.open} size={size} />
-                      {c.late > 0 && <Badge value={c.late} size={size} late />}
-                    </span>
-                    <span className="mt-[0.4em] w-full truncate text-center text-paper-dim" style={{ fontSize: Math.max(9, size * 0.18) }}>
-                      {c.name}
-                    </span>
-                  </button>
-                ))
-              }
-            </CircleRow>
-            <CircleRow title="Colaboradores em Pauta" empty="Nenhuma demanda aberta com responsável" count={people.length} max={10} delay={p.delay + 0.15}>
-              {(size, n) =>
-                people.slice(0, n).map((x) => (
-                  <button key={x.name} onClick={() => drillPerson(x.name)} className="group flex min-w-0 flex-col items-center" title={`${x.name} · ${x.n} abertas`}>
-                    <span className="relative">
-                      <Avatar name={x.name} size={size} />
-                      <Badge value={x.n} size={size} />
-                    </span>
-                    <span className="mt-[0.4em] w-full truncate text-center text-paper-dim" style={{ fontSize: Math.max(9, size * 0.18) }}>
-                      {shortName(x.name).split(" ")[0]}
-                    </span>
-                  </button>
-                ))
-              }
-            </CircleRow>
+            <CircleRow
+              title="Clientes em Pauta"
+              empty="Nenhum cliente com demanda aberta"
+              items={clients}
+              max={8}
+              delay={p.delay}
+              live={p.motionOn}
+              hold={p.spotlight}
+              render={(c, size) => (
+                <button onClick={() => drillClient(c.name)} className="group flex w-full min-w-0 flex-col items-center" title={`${c.name} · ${c.open} abertas${c.late ? ` · ${c.late} vencidas` : ""}`}>
+                  <span className={`relative rounded-full transition-shadow duration-500 ${spotClient?.name === c.name ? "shadow-[0_0_0_3px_#151517,0_0_0_5px_#E7103D]" : ""}`}>
+                    <ClientMark name={c.name} size={size} className="transition group-hover:scale-105" />
+                    <Badge value={c.open} size={size} />
+                    {c.late > 0 && <Badge value={c.late} size={size} late />}
+                  </span>
+                  <span className="mt-[0.4em] w-full truncate text-center text-paper-dim" style={{ fontSize: Math.max(9, size * 0.18) }}>
+                    {c.name}
+                  </span>
+                </button>
+              )}
+            />
+            <CircleRow
+              title="Colaboradores em Pauta"
+              empty="Nenhuma demanda aberta com responsável"
+              items={people}
+              max={10}
+              delay={p.delay + 0.15}
+              live={p.motionOn}
+              hold={false}
+              render={(x, size) => (
+                <button onClick={() => drillPerson(x.name)} className="group flex w-full min-w-0 flex-col items-center" title={`${x.name} · ${x.n} abertas`}>
+                  <span className="relative">
+                    <Avatar name={x.name} size={size} />
+                    <Badge value={x.n} size={size} />
+                  </span>
+                  <span className="mt-[0.4em] w-full truncate text-center text-paper-dim" style={{ fontSize: Math.max(9, size * 0.18) }}>
+                    {shortName(x.name).split(" ")[0]}
+                  </span>
+                </button>
+              )}
+            />
 
-            <InsightLine rows={rows} base={p.base} today={today} />
+            {spotClient ? (
+              <SpotPanel key={spotClient.name} client={spotClient} rows={open.filter((d) => d.client === spotClient.name)} today={today} />
+            ) : (
+              <InsightLine rows={rows} base={p.base} today={today} />
+            )}
             </div>
           </>
         )}
+        <TileToasts toasts={p.toasts} />
       </div>
     </motion.article>
   );
 }
 
-function Metric({ label, value, alert, warn }: { label: string; value: number; alert?: boolean; warn?: boolean }) {
+interface Counting {
+  cycle: number;
+  delay: number;
+  on: boolean;
+}
+
+/** Status em que há trabalho acontecendo: o trecho da barra ganha um brilho correndo. */
+const FLOWING = new Set<StatusCategory>(["pauta", "briefing", "aprovacao"]);
+
+/** Reconta de zero até o valor quando o ciclo de leitura passa pela coluna (só no modo telão). */
+function useCountUp(value: number, { cycle, delay, on }: Counting) {
+  const [v, setV] = useState(value);
+  const val = useRef(value);
+  val.current = value;
+  const busy = useRef(false);
+  useEffect(() => {
+    if (!busy.current) setV(value);
+  }, [value]);
+  useEffect(() => {
+    if (!on || !cycle) {
+      setV(val.current);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now() + delay * 1000;
+    const dur = 1100;
+    busy.current = true;
+    const step = (now: number) => {
+      if (now < t0) {
+        raf = requestAnimationFrame(step);
+        return;
+      }
+      const k = Math.min(1, (now - t0) / dur);
+      setV(Math.round(val.current * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) raf = requestAnimationFrame(step);
+      else busy.current = false;
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      busy.current = false;
+    };
+  }, [cycle, on, delay]);
+  return v;
+}
+
+function Metric({ label, value, alert, warn, ...counting }: { label: string; value: number; alert?: boolean; warn?: boolean } & Counting) {
+  const shown = useCountUp(value, counting);
   return (
     <div className="min-w-0 text-center">
-      <span className="display block leading-none" style={{ fontSize: "calc(var(--u) * 8)", color: alert ? LATE : warn ? "#d95926" : "#FFFBF0" }}>
-        {value}
+      <span className="display block tabular-nums leading-none" style={{ fontSize: "calc(var(--u) * 8)", color: alert ? LATE : warn ? "#d95926" : "#FFFBF0" }}>
+        {shown}
       </span>
       <span className="mt-[0.35em] block truncate text-paper-mute" style={{ fontSize: "max(10px, calc(var(--u) * 1.9))" }}>
         {label}
@@ -397,7 +664,8 @@ function Badge({ value, size, late }: { value: number; size: number; late?: bool
 }
 
 /** Rosca em SVG que se desenha ao entrar. */
-function Donut({ items, total, delay, onPick }: { items: { name: string; n: number; color: string }[]; total: number; delay: number; onPick: (name: string) => void }) {
+function Donut({ items, total, delay, onPick, counting }: { items: { name: string; n: number; color: string }[]; total: number; delay: number; onPick: (name: string) => void; counting: Counting }) {
+  const shown = useCountUp(total, counting);
   const r = 40;
   const c = 2 * Math.PI * r;
   let acc = 0;
@@ -432,8 +700,8 @@ function Donut({ items, total, delay, onPick }: { items: { name: string; n: numb
         })}
       </svg>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="display leading-none text-paper" style={{ fontSize: "calc(var(--u) * 5.4)" }}>
-          {total}
+        <span className="display tabular-nums leading-none text-paper" style={{ fontSize: "calc(var(--u) * 5.4)" }}>
+          {shown}
         </span>
         <span className="text-paper-mute" style={{ fontSize: "max(10px, calc(var(--u) * 1.5))" }}>
           demandas
@@ -443,8 +711,30 @@ function Donut({ items, total, delay, onPick }: { items: { name: string; n: numb
   );
 }
 
-/** Uma fileira de círculos que ocupa toda a largura; o tamanho acompanha a largura e a altura do cartão. */
-function CircleRow({ title, empty, count, max, delay, children }: { title: string; empty: string; count: number; max: number; delay: number; children: (size: number, n: number) => React.ReactNode }) {
+/**
+ * Uma fileira de círculos que ocupa toda a largura; o tamanho acompanha a largura e a altura do cartão.
+ * No modo telão, quando não cabem todos, a fileira troca de página sozinha em vez de esconder o resto.
+ */
+function CircleRow<T extends { name: string }>({
+  title,
+  empty,
+  items,
+  max,
+  delay,
+  live,
+  hold,
+  render,
+}: {
+  title: string;
+  empty: string;
+  items: T[];
+  max: number;
+  delay: number;
+  live: boolean;
+  /** Fica na primeira página (holofote aberto num cliente dela). */
+  hold: boolean;
+  render: (item: T, size: number) => React.ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -460,34 +750,56 @@ function CircleRow({ title, empty, count, max, delay, children }: { title: strin
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const n = Math.min(count, max);
+  const pages = Math.ceil(items.length / max);
+  const [page, setPage] = useState(0);
+  const rotating = live && !hold && pages > 1;
+  useEffect(() => {
+    if (!rotating) {
+      setPage(0);
+      return;
+    }
+    const id = window.setInterval(() => setPage((p) => (p + 1) % pages), 6000);
+    return () => window.clearInterval(id);
+  }, [rotating, pages]);
+  const pg = rotating ? page % pages : 0;
+  const slice = items.slice(pg * max, pg * max + max);
+  const n = Math.min(items.length, max);
   const colW = n ? dims.w / n : 0;
   const size = Math.max(22, Math.min(colW * 0.72, dims.h * 0.13, 120));
   return (
     <div className="flex min-h-0 shrink-0 flex-col" style={{ gap: "calc(var(--u) * 1.4)" }}>
-      <span className="flex items-baseline justify-between">
+      <span className="flex items-center justify-between">
         <span className="eyebrow" style={{ fontSize: "max(10px, calc(var(--u) * 1.8))" }}>
           {title}
         </span>
-        {count > max && (
-          <span className="text-paper-faint" style={{ fontSize: "max(10px, calc(var(--u) * 1.7))" }}>
-            +{count - max}
+        {rotating ? (
+          <span className="flex items-center" style={{ gap: "calc(var(--u) * 0.6)" }} aria-label={`Página ${pg + 1} de ${pages}`}>
+            {Array.from({ length: pages }, (_, i) => (
+              <span key={i} className={`rounded-full transition-all duration-500 ${i === pg ? "bg-paper" : "bg-white/20"}`} style={{ height: "calc(var(--u) * 0.8)", width: i === pg ? "calc(var(--u) * 2.4)" : "calc(var(--u) * 0.8)" }} />
+            ))}
           </span>
+        ) : (
+          items.length > max && (
+            <span className="text-paper-faint" style={{ fontSize: "max(10px, calc(var(--u) * 1.7))" }}>
+              +{items.length - max}
+            </span>
+          )
         )}
       </span>
       <div ref={ref}>
         {n ? (
           <motion.div
+            key={pg}
             className="grid"
             style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
             initial="hidden"
             animate="show"
-            variants={{ show: { transition: { staggerChildren: 0.05, delayChildren: delay + 0.4 } } }}
+            variants={{ show: { transition: { staggerChildren: 0.05, delayChildren: pg ? 0.05 : delay + 0.4 } } }}
           >
             {dims.w > 0 &&
-              (Array.isArray(children(size, n)) ? (children(size, n) as React.ReactNode[]) : [children(size, n)]).map((child, i) => (
-                <motion.div key={i} className="flex min-w-0 justify-center" variants={{ hidden: { opacity: 0, scale: 0.6, y: 10 }, show: { opacity: 1, scale: 1, y: 0 } }}>
-                  {child}
+              slice.map((item) => (
+                <motion.div key={item.name} className="flex min-w-0 justify-center" variants={{ hidden: { opacity: 0, scale: 0.6, y: 10 }, show: { opacity: 1, scale: 1, y: 0 } }}>
+                  {render(item, size)}
                 </motion.div>
               ))}
           </motion.div>
@@ -497,6 +809,89 @@ function CircleRow({ title, empty, count, max, delay, children }: { title: strin
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Holofote: as demandas abertas do cliente em destaque, vencidas primeiro. */
+function SpotPanel({ client, rows, today }: { client: { name: string; open: number; late: number }; rows: Demand[]; today: string }) {
+  const list = [...rows]
+    .sort((a, b) => Number(isLate(b, today)) - Number(isLate(a, today)) || (a.due ?? "9999").localeCompare(b.due ?? "9999"))
+    .slice(0, 4);
+  const fmt = (iso: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "sem prazo");
+  return (
+    <motion.div
+      className="mt-auto flex min-h-0 flex-1 flex-col justify-end overflow-hidden"
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-clf-red/30 bg-clf-red/[0.07]" style={{ padding: "calc(var(--u) * 1.8)", gap: "calc(var(--u) * 1)" }}>
+        <div className="flex shrink-0 items-baseline justify-between" style={{ gap: "calc(var(--u) * 1.4)", fontSize: "max(11px, calc(var(--u) * 2.2))" }}>
+          <span className="min-w-0 truncate font-semibold text-paper">{client.name}</span>
+          <span className="shrink-0 text-paper-dim">
+            {client.open} {client.open === 1 ? "aberta" : "abertas"}
+            {client.late ? <b className="ml-[0.6em] font-semibold text-clf-red">{client.late} {client.late === 1 ? "vencida" : "vencidas"}</b> : null}
+          </span>
+        </div>
+        <ul className="min-h-0 overflow-hidden" style={{ fontSize: "max(10px, calc(var(--u) * 1.9))" }}>
+          {list.map((d, i) => {
+            const late = isLate(d, today);
+            return (
+              <motion.li
+                key={d.id}
+                className="flex items-center border-t border-white/[0.06] first:border-t-0"
+                style={{ gap: "calc(var(--u) * 1.2)", paddingBlock: "calc(var(--u) * 0.6)" }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 + i * 0.08 }}
+              >
+                <span className="h-[0.6em] w-[0.6em] shrink-0 rounded-sm" style={{ background: STATUS_COLORS[d.statusCategory] }} />
+                <span className="min-w-0 flex-1 truncate text-paper">{d.task}</span>
+                <span className="shrink-0 text-paper-mute">{d.status}</span>
+                <span className={`shrink-0 tabular-nums ${late ? "font-semibold text-clf-red" : "text-paper-dim"}`}>{fmt(d.due)}</span>
+              </motion.li>
+            );
+          })}
+        </ul>
+      </div>
+    </motion.div>
+  );
+}
+
+/** Avisos de mudança na planilha, dentro do cartão do time que mudou. */
+function TileToasts({ toasts }: { toasts: Toast[] }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col items-stretch" style={{ padding: "calc(var(--u) * 2)", gap: "calc(var(--u) * 1)" }}>
+      <AnimatePresence>
+        {toasts.slice(-2).map((t) => (
+          <motion.div
+            key={t.id}
+            layout
+            initial={{ opacity: 0, y: -24, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className={`flex items-center rounded-2xl border bg-[#1b1b1d]/95 shadow-2xl backdrop-blur-xl ${t.kind === "new" ? "border-clf-red/50" : "border-[#F5C451]/40"}`}
+            style={{ gap: "calc(var(--u) * 1.6)", padding: "calc(var(--u) * 1.6)" }}
+          >
+            <span
+              className={`flex shrink-0 items-center justify-center rounded-full ${t.kind === "new" ? "bg-clf-red/15 text-clf-red" : "bg-[#F5C451]/15 text-[#F5C451]"}`}
+              style={{ width: "calc(var(--u) * 4.4)", height: "calc(var(--u) * 4.4)" }}
+            >
+              {t.kind === "new" ? <Sparkles style={{ width: "50%", height: "50%" }} /> : <RefreshCw style={{ width: "50%", height: "50%" }} />}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-paper" style={{ fontSize: "max(11px, calc(var(--u) * 2.2))" }}>
+                {t.kind === "new" ? t.title.replace(/ em .*$/, "") : "Status atualizado"}
+              </span>
+              <span className="block truncate text-paper-dim" style={{ fontSize: "max(10px, calc(var(--u) * 2))" }}>
+                {t.text}
+              </span>
+            </span>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
