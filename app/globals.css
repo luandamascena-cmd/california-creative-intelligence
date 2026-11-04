@@ -229,3 +229,28 @@ body {
     animation: none;
   }
 }
+
+/* Panorama Horizontal: o miolo do cartão se reorganiza pela proporção do próprio cartão.
+   Cartões largos (telas 32:9) ganham duas colunas; cartões quase quadrados empilham tudo. */
+/* Registrada para virar medida fixa no cartão: containers internos não alteram a escala. */
+@property --u { syntax: "<length>"; inherits: true; initial-value: 4px; }
+.ph-body {
+  --u: min(1cqh, 1cqw);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.ph-head { grid-column: 1 / -1; }
+.ph-mix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-aspect-ratio: 3 / 2) {
+  .ph-body {
+    --u: min(1.3cqh, 0.62cqw);
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    column-gap: calc(var(--u) * 5);
+  }
+  .ph-mix { grid-template-columns: minmax(0, 1fr); flex: 1; align-content: center; row-gap: calc(var(--u) * 4) !important; }
+}
+/* O insight só aparece quando cabe inteiro; sem espaço, some em vez de ser cortado. */
+.ph-insight { container-type: size; position: relative; }
+@container (max-height: 52px) { .ph-insight-box { visibility: hidden; } }

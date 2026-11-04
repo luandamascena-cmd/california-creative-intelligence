@@ -8,20 +8,16 @@ import { addDaysISO } from "@/lib/text";
 import type { Demand } from "@/lib/types";
 import { usePresent } from "./present";
 
-interface Item {
+export interface InsightItem {
   k: string;
   icon: LucideIcon;
   text: React.ReactNode;
 }
+type Item = InsightItem;
 
-/**
- * Leituras automáticas do recorte: fatos calculados da planilha sobre o que está sendo produzido
- * (volume, formatos, clientes, unidades, novos negócios). Prazos e travas ficam no gráfico de status.
- */
-export function Insights({ rows, today, compact, trendRows, rotate }: { rows: Demand[]; today: string; compact?: boolean; trendRows?: Demand[]; /** Uma frase por vez, com setas para passar (Panorama). */ rotate?: boolean }) {
-  const titleId = useId();
-  const [idx, setIdx] = useState(0);
-  const items = useMemo(() => {
+/** Frases dos Insights, também usadas pelo Panorama Horizontal. */
+export function useInsightItems(rows: Demand[], today: string, trendRows?: Demand[]): Item[] {
+  return useMemo(() => {
     const out: Item[] = [];
     if (!rows.length) return out;
 
@@ -113,6 +109,16 @@ export function Insights({ rows, today, compact, trendRows, rotate }: { rows: De
     }
     return out.slice(0, 4);
   }, [rows, today, trendRows]);
+}
+
+/**
+ * Leituras automáticas do recorte: fatos calculados da planilha sobre o que está sendo produzido
+ * (volume, formatos, clientes, unidades, novos negócios). Prazos e travas ficam no gráfico de status.
+ */
+export function Insights({ rows, today, compact, trendRows, rotate }: { rows: Demand[]; today: string; compact?: boolean; trendRows?: Demand[]; /** Uma frase por vez, com setas para passar (Panorama). */ rotate?: boolean }) {
+  const titleId = useId();
+  const [idx, setIdx] = useState(0);
+  const items = useInsightItems(rows, today, trendRows);
   useEffect(() => setIdx(0), [items.length]);
   const cur = items[Math.min(idx, items.length - 1)];
   const step = (n: number) => setIdx((i) => (i + n + items.length) % items.length);

@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Info } from "lucide-react";
+import { ArrowRight, Columns3, Info, LayoutGrid, Rows3 } from "lucide-react";
 import { useDataset } from "./useDataset";
 import { Backdrop } from "./Backdrop";
 import { NetworkMap, type NetData } from "./NetworkMap";
-import { dashboardHref, HubHeader, HubLoading, regionalHref, Stat, ThermoRow } from "./hub-parts";
+import { dashboardHref, HubHeader, HubLoading, regionalHref, ThermoRow } from "./hub-parts";
 import network from "@/lib/brazil-network.json";
 import { REGIONAL_ORDER, REGIONAL_PLACES } from "@/lib/regions";
 import { computePressure, LEVEL_COLOR, PRESSURE_DEFINITION, type Pressure } from "@/lib/pressure";
@@ -103,35 +103,59 @@ export default function Hub() {
 
         <div className="mt-8 grid gap-8 xl:mt-6 xl:grid-cols-[400px_1fr] xl:items-center xl:gap-6">
           <section className="flex flex-col gap-5">
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
-              <Link href={dashboardHref()} className="card-red group relative block overflow-hidden p-7 text-paper transition hover:brightness-110">
-                <span aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full border border-white/20" />
-                <span aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 rounded-full border border-white/15" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide2 text-white/80">Todas as regionais e times</span>
-                <span className="display mt-2 block text-[46px] leading-none">Visão Geral</span>
-                <span className="mt-6 grid grid-cols-3 gap-3 border-t border-white/25 pt-5">
-                  <Stat value={totalOpen} label="abertas" />
-                  <Stat value={dueSoon} label="em 7 dias" />
-                  <Stat value={activeTeams} label={activeTeams === 1 ? "time ativo" : "times ativos"} />
-                </span>
-                <span className="mt-6 flex items-center justify-between text-[14px] font-semibold">
-                  Abrir a pauta consolidada
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/15 transition group-hover:translate-x-1">
-                    <ArrowRight size={18} />
-                  </span>
-                </span>
-              </Link>
-              <Link
-                href="/dashboard?visao=panorama"
-                className="card group mt-3 flex items-center justify-between px-5 py-4 transition hover:border-white/25 hover:bg-white/[0.06]"
-              >
-                <span>
-                  <span className="block text-[14px] font-semibold text-paper">Panorama</span>
-                  <span className="block text-[12px] text-paper-mute">Todas as regionais e times em uma página</span>
-                </span>
-                <ArrowRight size={17} className="text-paper-dim transition group-hover:translate-x-1 group-hover:text-paper" />
-              </Link>
-            </motion.div>
+            {/* Três portas de entrada com o mesmo peso: a pauta consolidada e os dois panoramas. */}
+            <nav aria-label="Entradas da pauta" className="grid gap-3">
+              {(
+                [
+                  {
+                    href: dashboardHref(),
+                    eyebrow: "Pauta consolidada",
+                    title: "Visão Geral",
+                    meta: `${totalOpen} abertas · ${dueSoon} em 7 dias · ${activeTeams} ${activeTeams === 1 ? "time ativo" : "times ativos"}`,
+                    Icon: LayoutGrid,
+                    red: true,
+                  },
+                  {
+                    href: "/dashboard?visao=panorama",
+                    eyebrow: "Regional por regional",
+                    title: "Panorama Vertical",
+                    meta: "Times em sequência, rolando a página",
+                    Icon: Rows3,
+                  },
+                  {
+                    href: "/dashboard?visao=horizontal",
+                    eyebrow: "Tela única · ultra-wide",
+                    title: "Panorama Horizontal",
+                    meta: "Todas as regionais lado a lado, sem rolagem",
+                    Icon: Columns3,
+                  },
+                ] as const
+              ).map((e, i) => (
+                <motion.div key={e.title} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 + i * 0.06 }}>
+                  <Link
+                    href={e.href}
+                    className={`group relative flex items-center gap-4 overflow-hidden px-5 py-4 transition ${
+                      "red" in e ? "card-red text-paper hover:brightness-110" : "card hover:border-white/25 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {"red" in e && <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full border border-white/20" />}
+                    <span
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border ${
+                        "red" in e ? "border-white/30 bg-white/15" : "border-white/12 bg-white/[0.05] text-paper-dim group-hover:text-paper"
+                      }`}
+                    >
+                      <e.Icon size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[10.5px] font-semibold uppercase tracking-wide2 ${"red" in e ? "text-white/80" : "text-paper-mute"}`}>{e.eyebrow}</span>
+                      <span className="display mt-0.5 block text-[26px] leading-none">{e.title}</span>
+                      <span className={`mt-1.5 block truncate text-[12px] ${"red" in e ? "text-white/85" : "text-paper-mute"}`}>{e.meta}</span>
+                    </span>
+                    <ArrowRight size={18} className={`shrink-0 transition group-hover:translate-x-1 ${"red" in e ? "" : "text-paper-dim group-hover:text-paper"}`} />
+                  </Link>
+                </motion.div>
+              ))}
+            </nav>
 
             <motion.section
               initial={{ opacity: 0, y: 14 }}

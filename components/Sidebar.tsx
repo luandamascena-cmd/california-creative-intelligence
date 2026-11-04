@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, ChevronsLeft, ChevronsRight, LayoutGrid, LogOut, Map as MapIcon, MapPin, Rows3, ShieldCheck } from "lucide-react";
+import { BookOpen, ChevronsLeft, ChevronsRight, Columns3, LayoutGrid, LogOut, Map as MapIcon, MapPin, Rows3, ShieldCheck } from "lucide-react";
 import type { TabInfo } from "@/lib/types";
 import { regionalName } from "@/lib/labels";
 import { REGIONAL_PLACES } from "@/lib/regions";
@@ -13,8 +13,8 @@ interface Props {
   collapsed: boolean;
   alerts: number;
   /** Panorama: página longa com todas as regionais e times. */
-  panorama: boolean;
-  onPanorama: () => void;
+  panorama: "vertical" | "horizontal" | null;
+  onPanorama: (kind: "vertical" | "horizontal") => void;
   onToggle: () => void;
   onNavigate: (regional: string | null, team: string | null) => void;
   onQuality: () => void;
@@ -74,11 +74,21 @@ export function Sidebar({ tabs, regional, team, collapsed, alerts, panorama, onP
               </>
             )}
           </button>
-          <button className={item(panorama)} onClick={onPanorama} aria-current={panorama ? "page" : undefined} title="Panorama: todas as regionais e times em uma página">
-            {panorama && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
-            <Rows3 size={16} className="shrink-0" />
-            {!collapsed && <span className="flex-1">Panorama</span>}
-          </button>
+          {(
+            [
+              { kind: "vertical", label: "Panorama Vertical", Icon: Rows3, hint: "Panorama Vertical: regionais e times em sequência, para rolar" },
+              { kind: "horizontal", label: "Panorama Horizontal", Icon: Columns3, hint: "Panorama Horizontal: todas as regionais em uma única tela, para monitores ultra-wide" },
+            ] as const
+          ).map(({ kind, label, Icon, hint }) => {
+            const on = panorama === kind;
+            return (
+              <button key={kind} className={item(on)} onClick={() => onPanorama(kind)} aria-current={on ? "page" : undefined} title={hint}>
+                {on && <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-[2px] rounded bg-clf-red" />}
+                <Icon size={16} className="shrink-0" />
+                {!collapsed && <span className="flex-1">{label}</span>}
+              </button>
+            );
+          })}
         </div>
 
         <div>
