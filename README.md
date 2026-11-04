@@ -108,7 +108,18 @@ Conferir os cálculos contra a Visão Geral do snapshot: `npm run check:data`.
 
 ---
 
-## 5. Publicar no Railway
+## 5. Publicar no Render (hospedagem atual)
+
+Endereço: https://california-creative-intelligence.onrender.com (serviço `california-creative-intelligence`, plano grátis, região Virginia).
+
+1. No Render: **New > Web Service**, escolha o repositório, runtime Node, build `npm ci && npm run build`, start `npm start`.
+2. Variáveis: `APPS_SCRIPT_URL`, `APPS_SCRIPT_TOKEN`, `WEBHOOK_SECRET`, `SESSION_SECRET`, `DASHBOARD_PASSWORD`, `ADMIN_PASSWORD`, `LAYOUT_STORE=apps-script`, `NODE_VERSION=22`.
+3. No Apps Script, `DASHBOARD_URL` aponta para o endereço do Render (rode `configurar()` depois de trocar) e `ativarDespertador()` cria um acionador que visita `/api/health` a cada 10 minutos, para o serviço grátis não dormir.
+
+O plano grátis não tem disco permanente: o layout compartilhado fica guardado nas propriedades do Apps Script (`lib/layout-store.ts`). Com volume (Railway ou plano pago), defina `LAYOUT_FILE` para voltar a usar arquivo.
+
+### Publicar no Railway (alternativa)
+
 
 1. Suba esta pasta para um repositório no GitHub.
 2. No Railway: **New Project > Deploy from GitHub repo** e escolha o repositório. O Nixpacks detecta Next.js e usa `npm run build` e `npm start`; a porta vem da variável `PORT`, que o Railway define sozinho.
@@ -130,7 +141,7 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 
 - **Central**: mapa do Brasil com as regionais. Só o círculo do urso é clicável. Regionais com mais de um time (hoje São Paulo, Fortaleza e Salvador) abrem uma página própria, com fotos da cidade desfocadas ao fundo, o mapa do estado (sem clique no urso), a Visão Geral da regional, o termômetro por time e a escolha entre California e Content House. Regionais com um único time vão direto para a dashboard.
 - **Panorama** (menu lateral ou central): página longa só com as regionais. Cada regional abre com uma faixa de largura total, com a foto da cidade desfocada atrás do nome centralizado; dentro dela, um bloco enxuto por time: Tipos de Demanda (rosca, pela coluna Tipo de projeto), Status das Demandas (colunas) e Insights (uma frase por vez, com setas) em três colunas iguais, Clientes em Pauta, Colaboradores em Pauta e Top 10 Clientes. O Panorama não usa o layout personalizado da dashboard.
-- **Layout personalizado** (somente administrador): entre com `ADMIN_PASSWORD` e use Personalizar para arrastar, mudar a largura, trocar o tipo (barras, rosca, ranking, tabela), remover ou adicionar gráficos. "Salvar para todos" grava o layout no servidor (`LAYOUT_FILE`, no volume `/data` do Railway) e todos os acessos passam a ver a mesma arrumação.; "Restaurar padrão" volta à arrumação original.
+- **Layout personalizado** (somente administrador): entre com `ADMIN_PASSWORD` e use Personalizar para arrastar, mudar a largura, trocar o tipo (barras, rosca, ranking, tabela), remover ou adicionar gráficos. "Salvar para todos" grava o layout no Apps Script (ou em `LAYOUT_FILE`, quando há disco) e todos os acessos passam a ver a mesma arrumação; "Restaurar padrão" volta à arrumação original.
 - **Navegação**: Visão Geral (todas as guias) ou regional; dentro da regional, filtro por time. Regionais e times vêm da planilha. O menu lateral recolhe pela alça na borda (ou por Recolher) e mostra as siglas SP, RJ, FOR e SSA.
 - **Filtros**: Business Unit, cliente e período ficam fixos no topo, com o valor escolhido dentro do próprio seletor. Toda dashboard abre nos **últimos 30 dias**; o período pode ser trocado por semana, mês, bimestre, trimestre, semestre, ano ou todo o período. Colaborador, formato, status, prioridade e tipo entram pelo "Aplicar como filtro" do drill-down e aparecem como etiquetas removíveis. Os filtros ficam na URL, então um link compartilhado abre no mesmo recorte.
 - **Abertura**: o número de projetos, o status das demandas em formato compacto e os insights do recorte (volume, formatos, clientes, Business Units e novos negócios; prazos e travas ficam no status).
@@ -154,5 +165,5 @@ A dashboard já sincroniza sozinha a cada `REFRESH_SECONDS`. Para que uma ediç�
 | Mudar cores de status ou BU | `components/theme.ts` |
 | Ajustar regras de projeto, duplicata ou status | `lib/normalize.ts` |
 | Incluir um gráfico | `components/charts/` e a grade em `components/Dashboard.tsx` |
-| Trocar a senha | Variável `DASHBOARD_PASSWORD` no Railway (reinicia sozinho) |
-| Trocar a senha de administrador | Variável `ADMIN_PASSWORD` no Railway |
+| Trocar a senha | Variável `DASHBOARD_PASSWORD` no Render (reinicia sozinho) |
+| Trocar a senha de administrador | Variável `ADMIN_PASSWORD` no Render |

@@ -143,7 +143,12 @@ function doPost(e) {
  */
 function manterAcordado() {
   var url = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL');
-  if (url) UrlFetchApp.fetch(url + '/api/health', { muteHttpExceptions: true });
+  if (!url) return;
+  try {
+    UrlFetchApp.fetch(url + '/api/health', { muteHttpExceptions: true });
+  } catch (err) {
+    console.log('Dashboard ainda acordando: ' + err);
+  }
 }
 
 function ativarDespertador() {
