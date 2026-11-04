@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight, Columns3, Info, LayoutGrid, Rows3 } from "lucide-react";
+import { ArrowRight, Columns3, Info, LayoutGrid, PanelsTopLeft, Rows3 } from "lucide-react";
 import { useDataset } from "./useDataset";
 import { Backdrop } from "./Backdrop";
 import { NetworkMap, type NetData } from "./NetworkMap";
@@ -106,79 +106,58 @@ export default function Hub() {
           <section className="flex flex-col gap-5">
             {/* Três portas de entrada com o mesmo peso: a pauta consolidada e os dois panoramas. */}
             <nav aria-label="Entradas da pauta" className="grid min-w-0 gap-3">
-              {(
-                [
-                  {
-                    href: dashboardHref(),
-                    eyebrow: "Pauta consolidada",
-                    title: "Visão Geral",
-                    meta: `${totalOpen} abertas · ${dueSoon} em 7 dias · ${activeTeams} ${activeTeams === 1 ? "time ativo" : "times ativos"}`,
-                    Icon: LayoutGrid,
-                    red: true,
-                  },
-                  {
-                    href: "/dashboard?visao=panorama",
-                    eyebrow: "Regional por regional",
-                    title: "Panorama Vertical",
-                    meta: "Times em sequência, rolando a página",
-                    Icon: Rows3,
-                  },
-                  {
-                    href: "/dashboard?visao=horizontal",
-                    eyebrow: "Tela única · ultra-wide",
-                    title: "Panorama Horizontal",
-                    meta: "As duas marcas lado a lado, sem rolagem",
-                    Icon: Columns3,
-                  },
-                ] as const
-              ).map((e, i) => (
-                <motion.div key={e.title} className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 + i * 0.06 }}>
-                  <Link
-                    href={e.href}
-                    className={`group relative flex items-center gap-4 overflow-hidden px-5 py-4 transition ${
-                      "red" in e ? "card-red text-paper hover:brightness-110" : "card hover:border-white/25 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    {"red" in e && <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full border border-white/20" />}
-                    <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border ${
-                        "red" in e ? "border-white/30 bg-white/15" : "border-white/12 bg-white/[0.05] text-paper-dim group-hover:text-paper"
-                      }`}
-                    >
-                      <e.Icon size={18} />
+              <motion.div className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
+                <Link href={dashboardHref()} className="card-red group relative flex items-center gap-4 overflow-hidden px-5 py-4 text-paper transition hover:brightness-110">
+                  <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full border border-white/20" />
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/15">
+                    <LayoutGrid size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10.5px] font-semibold uppercase tracking-wide2 text-white/80">Pauta consolidada</span>
+                    <span className="display mt-0.5 block text-[26px] leading-none">Visão Geral</span>
+                    <span className="mt-1.5 block truncate text-[12px] text-white/85">
+                      {totalOpen} abertas · {dueSoon} em 7 dias · {activeTeams} {activeTeams === 1 ? "time ativo" : "times ativos"}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-[10.5px] font-semibold uppercase tracking-wide2 ${"red" in e ? "text-white/80" : "text-paper-mute"}`}>{e.eyebrow}</span>
-                      <span className="display mt-0.5 block text-[26px] leading-none">{e.title}</span>
-                      <span className={`mt-1.5 block truncate text-[12px] ${"red" in e ? "text-white/85" : "text-paper-mute"}`}>{e.meta}</span>
-                    </span>
-                    <ArrowRight size={18} className={`shrink-0 transition group-hover:translate-x-1 ${"red" in e ? "" : "text-paper-dim group-hover:text-paper"}`} />
-                  </Link>
-                </motion.div>
-              ))}
-              {/* Panoramas de um time só, no formato do Horizontal. */}
+                  </span>
+                  <ArrowRight size={18} className="shrink-0 transition group-hover:translate-x-1" />
+                </Link>
+              </motion.div>
+
+              {/* Os quatro Panoramas, dois por linha, todos com o mesmo peso. */}
               <div className="grid grid-cols-2 gap-3">
                 {(
                   [
-                    { href: "/dashboard?visao=california", team: "california", name: "California" },
-                    { href: "/dashboard?visao=content-house", team: "content house", name: "Content House" },
+                    { href: "/dashboard?visao=panorama", title: "Vertical", meta: "Regionais em sequência", Icon: Rows3 },
+                    { href: "/dashboard?visao=horizontal", title: "Horizontal", meta: "As duas marcas, tela única", Icon: Columns3 },
+                    { href: "/dashboard?visao=california", team: "california", title: "California", meta: "Todas as regionais", Icon: PanelsTopLeft },
+                    { href: "/dashboard?visao=content-house", team: "content house", title: "Content House", meta: "Todas as regionais", Icon: PanelsTopLeft },
                   ] as const
                 ).map((e, i) => {
-                  const logo = TEAM_LOGOS[e.team];
+                  const logo = "team" in e ? TEAM_LOGOS[e.team] : null;
                   return (
-                    <motion.div key={e.team} className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.28 + i * 0.06 }}>
+                    <motion.div key={e.href} className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.16 + i * 0.05 }}>
                       <Link
                         href={e.href}
-                        aria-label={`Panorama ${e.name}`}
-                        className="card group flex h-full min-w-0 flex-col justify-between gap-3 px-4 py-4 transition hover:border-white/25 hover:bg-white/[0.06]"
+                        aria-label={`Panorama ${e.title}`}
+                        className="card group flex h-full min-w-0 flex-col gap-2.5 px-4 py-3.5 transition hover:border-white/25 hover:bg-white/[0.06]"
                       >
                         <span className="flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-wide2 text-paper-mute">
-                          Panorama
+                          <span className="flex items-center gap-1.5">
+                            <e.Icon size={13} />
+                            Panorama
+                          </span>
                           <ArrowRight size={15} className="text-paper-dim transition group-hover:translate-x-1 group-hover:text-paper" />
                         </span>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={logo.src} alt={e.name} width={logo.w} height={logo.h} className="block h-auto w-auto max-w-full" style={{ maxHeight: e.team === "california" ? 22 : 15 }} />
-                        <span className="text-[11.5px] text-paper-mute">Todas as regionais, tela única</span>
+                        {/* Altura fixa para os quatro títulos alinharem, com texto ou com marca. */}
+                        <span className="flex h-[24px] items-center">
+                          {logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={logo.src} alt={e.title} width={logo.w} height={logo.h} className="block w-auto max-w-full" style={{ height: e.title === "California" ? 17 : 11 }} />
+                          ) : (
+                            <span className="display block text-[24px] leading-none text-paper">{e.title}</span>
+                          )}
+                        </span>
+                        <span className="truncate text-[11.5px] text-paper-mute">{e.meta}</span>
                       </Link>
                     </motion.div>
                   );
