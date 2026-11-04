@@ -11,6 +11,7 @@ import { NetworkMap, type NetData } from "./NetworkMap";
 import { dashboardHref, HubHeader, HubLoading, regionalHref, ThermoRow } from "./hub-parts";
 import network from "@/lib/brazil-network.json";
 import { REGIONAL_ORDER, REGIONAL_PLACES } from "@/lib/regions";
+import { TEAM_LOGOS } from "@/lib/teams";
 import { computePressure, LEVEL_COLOR, PRESSURE_DEFINITION, type Pressure } from "@/lib/pressure";
 import { todayISO } from "@/lib/text";
 import type { Demand, TabInfo } from "@/lib/types";
@@ -104,7 +105,7 @@ export default function Hub() {
         <div className="mt-8 grid gap-8 xl:mt-6 xl:grid-cols-[400px_1fr] xl:items-center xl:gap-6">
           <section className="flex flex-col gap-5">
             {/* Três portas de entrada com o mesmo peso: a pauta consolidada e os dois panoramas. */}
-            <nav aria-label="Entradas da pauta" className="grid gap-3">
+            <nav aria-label="Entradas da pauta" className="grid min-w-0 gap-3">
               {(
                 [
                   {
@@ -126,12 +127,12 @@ export default function Hub() {
                     href: "/dashboard?visao=horizontal",
                     eyebrow: "Tela única · ultra-wide",
                     title: "Panorama Horizontal",
-                    meta: "Todas as regionais lado a lado, sem rolagem",
+                    meta: "As duas marcas lado a lado, sem rolagem",
                     Icon: Columns3,
                   },
                 ] as const
               ).map((e, i) => (
-                <motion.div key={e.title} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 + i * 0.06 }}>
+                <motion.div key={e.title} className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 + i * 0.06 }}>
                   <Link
                     href={e.href}
                     className={`group relative flex items-center gap-4 overflow-hidden px-5 py-4 transition ${
@@ -155,6 +156,34 @@ export default function Hub() {
                   </Link>
                 </motion.div>
               ))}
+              {/* Panoramas de um time só, no formato do Horizontal. */}
+              <div className="grid grid-cols-2 gap-3">
+                {(
+                  [
+                    { href: "/dashboard?visao=california", team: "california", name: "California" },
+                    { href: "/dashboard?visao=content-house", team: "content house", name: "Content House" },
+                  ] as const
+                ).map((e, i) => {
+                  const logo = TEAM_LOGOS[e.team];
+                  return (
+                    <motion.div key={e.team} className="min-w-0" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.28 + i * 0.06 }}>
+                      <Link
+                        href={e.href}
+                        aria-label={`Panorama ${e.name}`}
+                        className="card group flex h-full min-w-0 flex-col justify-between gap-3 px-4 py-4 transition hover:border-white/25 hover:bg-white/[0.06]"
+                      >
+                        <span className="flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-wide2 text-paper-mute">
+                          Panorama
+                          <ArrowRight size={15} className="text-paper-dim transition group-hover:translate-x-1 group-hover:text-paper" />
+                        </span>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={logo.src} alt={e.name} width={logo.w} height={logo.h} className="block h-auto w-auto max-w-full" style={{ maxHeight: e.team === "california" ? 22 : 15 }} />
+                        <span className="text-[11.5px] text-paper-mute">Todas as regionais, tela única</span>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </nav>
 
             <motion.section

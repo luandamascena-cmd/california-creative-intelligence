@@ -14,6 +14,7 @@ import { HeatmapChart, RegionalChart } from "./charts/structure";
 import { EditBar, WidgetGrid, useLayoutEditor, useSharedLayout } from "./LayoutGrid";
 import { Panorama } from "./Panorama";
 import { PanoramaHorizontal } from "./PanoramaHorizontal";
+import { panoramaByVisao, panoramaInfo, type PanoramaKind } from "@/lib/panoramas";
 import type { ChartCtx, DrillRequest } from "./charts/types";
 import { applyFilters, computeKpis, EMPTY_FILTERS, isLate, toCsv, CAT_LABEL, type Filters } from "@/lib/analytics";
 import { todayISO } from "@/lib/text";
@@ -59,14 +60,17 @@ export default function Dashboard() {
   const [quality, setQuality] = useState(false);
   const [glossary, setGlossary] = useState(false);
   const [today, setToday] = useState(todayISO());
-  const [view, setView] = useState<"dashboard" | "panorama" | "horizontal">("dashboard");
+  // "dashboard" ou um dos Panoramas.
+  const [view, setView] = useState<"dashboard" | PanoramaKind>("dashboard");
+  const horizontal = view === "horizontal" || view === "california" || view === "content-house";
   const shared = useSharedLayout();
   const dashEditor = useLayoutEditor("dashboard", shared);
 
   useEffect(() => {
     setFilters(readFilters());
     const visao = new URLSearchParams(window.location.search).get("visao");
-    if (visao === "panorama" || visao === "horizontal") setView(visao);
+    const pan = panoramaByVisao(visao);
+    if (pan) setView(pan.kind);
     try {
       setCollapsed(localStorage.getItem("ci-collapsed") === "1");
     } catch {}
@@ -79,7 +83,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!ready) return;
     const qs = new URLSearchParams();
-    if (view !== "dashboard") qs.set("visao", view);
+    if (view !== "dashboard") qs.set("visao", panoramaInfo(view).visao);
     KEYS.forEach((k) => {
       const v = filters[k];
       if (v) qs.set(k, v);
@@ -103,9 +107,9 @@ export default function Dashboard() {
     });
   }, [data]);
 
-  const openPanorama = useCallback((kind: "vertical" | "horizontal" = "vertical") => {
+  const openPanorama = useCallback((kind: PanoramaKind = "vertical") => {
     setFilters((f) => ({ ...f, regional: null, team: null }));
-    setView(kind === "horizontal" ? "horizontal" : "panorama");
+    setView(kind);
     setMobileNav(false);
     window.scrollTo({ top: 0 });
   }, []);
@@ -140,7 +144,7 @@ export default function Dashboard() {
     ? { today, buColors, buOrder, tabs, filters, capabilities: data.capabilities, drill: setDrill, navigate }
     : null;
 
-  const context = view === "panorama" ? "Panorama Vertical" : view === "horizontal" ? "Panorama Horizontal" : filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
+  const context = view !== "dashboard" ? panoramaInfo(view).label : filters.regional ? `${regionalName(filters.regional)}${filters.team ? " · " + filters.team : " · Todos os Times"}` : "Visão Geral";
   const contextTabs = tabs.filter((t) => (!filters.regional || t.regional === filters.regional) && (!filters.team || t.team === filters.team));
   const emptyContext = !!filters.regional && !navRows.length;
 
@@ -208,7 +212,7 @@ export default function Dashboard() {
           tabs={tabs}
           regional={view !== "dashboard" ? null : filters.regional}
           team={filters.team}
-          panorama={view === "panorama" ? "vertical" : view === "horizontal" ? "horizontal" : null}
+          panorama={view === "dashboard" ? null : view}
           onPanorama={openPanorama}
           collapsed={collapsed}
           alerts={alerts}
@@ -247,9 +251,11 @@ export default function Dashboard() {
               <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={() => openPanorama("vertical")}>
                 Panorama Vertical
               </button>
-              <button className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={() => openPanorama("horizontal")}>
-                Panorama Horizontal
-              </button>
+              {(["horizontal", "california", "content-house"] as const).map((k) => (
+                <button key={k} className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-[14px] hover:bg-white/[0.06]" onClick={() => openPanorama(k)}>
+                  {panoramaInfo(k).label}
+                </button>
+              ))}
               {tabs.map((t) => (
                 <button key={t.title} className="block w-full rounded-lg px-3 py-2 text-left text-[13px] text-paper-dim hover:bg-white/[0.06]" onClick={() => navigate(t.regional, t.team)}>
                   {tabLabel(t.title)} <span className="text-paper-faint">({t.rows})</span>
@@ -286,7 +292,7 @@ export default function Dashboard() {
           }}
         />
 
-        <main className={`mx-auto w-full space-y-4 px-4 py-5 sm:px-6 ${view === "horizontal" ? "max-w-none" : "max-w-[2200px]"} ${presenting && view !== "horizontal" ? "2xl:px-10" : ""}`}>
+        <main className={`mx-auto w-full space-y-4 px-4 py-5 sm:px-6 ${horizontal ? "max-w-none" : "max-w-[2200px]"} ${presenting && !horizontal ? "2xl:px-10" : ""}`}>
           {data.source === "demo" && (
             <div className="flex items-start gap-3 rounded-xl border border-[#c98500]/40 bg-[#c98500]/10 px-4 py-3 text-[12.5px] text-paper-dim">
               <Database size={15} className="mt-0.5 shrink-0 text-[#e0a73a]" />
@@ -306,8 +312,10 @@ export default function Dashboard() {
 
           {!presenting && <FilterBar base={navRows} filters={filters} caps={data.capabilities} today={today} onChange={update} onClear={() => setFilters((f) => ({ ...EMPTY_FILTERS, regional: f.regional, team: f.team }))} />}
 
-          {view === "horizontal" && ctx ? (
+          {horizontal && ctx ? (
             <PanoramaHorizontal
+              key={view}
+              team={panoramaInfo(view as PanoramaKind).team}
               data={data}
               filters={filters}
               today={today}
@@ -316,7 +324,7 @@ export default function Dashboard() {
               onOpen={(r, t) => navigate(r, t)}
               presenting={presenting}
             />
-          ) : view === "panorama" && ctx ? (
+          ) : view === "vertical" && ctx ? (
             <Panorama
               data={data}
               filters={filters}
@@ -382,7 +390,7 @@ export default function Dashboard() {
           )}
 
           {/* No Panorama Horizontal tudo cabe em uma tela: o rodapé sai para não criar rolagem. */}
-          {view !== "horizontal" && (
+          {!horizontal && (
           <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-4 text-[11.5px] text-paper-faint">
             <span>
               Fonte: {data.spreadsheetTitle} · {data.tabs.length} guias · atualização automática a cada {data.refreshSeconds} s

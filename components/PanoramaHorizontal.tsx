@@ -28,6 +28,8 @@ interface Props {
   onDrill: (r: DrillRequest) => void;
   onOpen: (regional: string | null, team: string | null) => void;
   presenting?: boolean;
+  /** Só um time (chave de teamKey, ex.: "california"): Panorama California ou Panorama Content House. */
+  team?: string;
 }
 
 /**
@@ -37,30 +39,36 @@ interface Props {
  * Tudo dentro dos cartões se dimensiona pelo próprio cartão (unidades cqh/cqw), então a tela
  * se preenche por inteiro em qualquer largura.
  */
-export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen, presenting }: Props) {
+export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen, presenting, team: only }: Props) {
   const live = !!presenting;
   const reduce = useReducedMotion();
   const motionOn = live && !reduce;
   const scope = useMemo(() => ({ ...filters, regional: null, team: null }), [filters]);
   const all = data.demands;
-  const scoped = useMemo(() => applyFilters(all, scope), [all, scope]);
+  const pool = useMemo(() => (only ? all.filter((d) => teamKey(d.team) === only) : all), [all, only]);
+  const scoped = useMemo(() => applyFilters(pool, scope), [pool, scope]);
   const periodRows = useMemo(() => filterByPeriod(scoped, filters.period, today), [scoped, filters.period, today]);
   // Um lado por time (California, Content House); dentro dele, um quadro por regional, como antes.
   const teams = useMemo(() => {
-    const names = [...new Set(data.tabs.map((t) => t.team))].sort((a, b) => teamOrder(a) - teamOrder(b));
+    const names = [...new Set(data.tabs.map((t) => t.team))].filter((t) => !only || teamKey(t) === only).sort((a, b) => teamOrder(a) - teamOrder(b));
     return names.map((team) => ({ team, tabs: data.tabs.filter((t) => t.team === team) }));
-  }, [data.tabs]);
-  const COLS = 2;
-  const rowsPerSide = Math.max(1, ...teams.map((t) => Math.ceil(t.tabs.length / COLS)));
+  }, [data.tabs, only]);
 
   // Altura exata da área visível, para nada precisar de rolagem.
   const box = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
+  const [width, setWidth] = useState(0);
+  // Dois times: duas colunas de quadros por lado. Um time só: numa tela bem larga (32:9) as regionais
+  // ficam lado a lado em uma linha; em telas mais estreitas, voltam para a grade de duas colunas.
+  const single = teams.length === 1;
+  const COLS = single && height && width / height >= 2.2 ? Math.max(1, teams[0].tabs.length) : 2;
+  const rowsPerSide = Math.max(1, ...teams.map((t) => Math.ceil(t.tabs.length / COLS)));
   useLayoutEffect(() => {
     const measure = () => {
       if (!box.current) return;
       const top = box.current.getBoundingClientRect().top + window.scrollY;
       setHeight(Math.max(420, window.innerHeight - top - (live ? 44 : 0) - 24));
+      setWidth(box.current.clientWidth);
     };
     measure();
     window.addEventListener("resize", measure);
@@ -219,7 +227,7 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
 
         <AnimatePresence>{headline && <HeadlineOverlay key={headline.text} h={headline} />}</AnimatePresence>
       </div>
-      {live && <PresentTicker demands={all} today={today} syncedAt={data.syncedAt} paused={!!headline} />}
+      {live && <PresentTicker demands={pool} today={today} syncedAt={data.syncedAt} paused={!!headline} />}
     </>
   );
 }
