@@ -31,9 +31,9 @@ interface Props {
 }
 
 /**
- * Panorama Horizontal: toda a pauta em uma única tela, sem rolagem, desenhada para monitores
- * super ultra-wide (32:9). Um lado por time (California e Content House), somando todas as regionais;
- * abaixo de cada time, um cartão por regional onde ele atua.
+ * Panorama Horizontal: todas as regionais e times em uma única tela, sem rolagem,
+ * desenhado para monitores super ultra-wide (32:9). California de um lado e Content House do outro;
+ * dentro de cada lado, um quadro por regional.
  * Tudo dentro dos cartões se dimensiona pelo próprio cartão (unidades cqh/cqw), então a tela
  * se preenche por inteiro em qualquer largura.
  */
@@ -45,12 +45,13 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
   const all = data.demands;
   const scoped = useMemo(() => applyFilters(all, scope), [all, scope]);
   const periodRows = useMemo(() => filterByPeriod(scoped, filters.period, today), [scoped, filters.period, today]);
-  // Um lado por time (California, Content House), cada um somando todas as regionais onde atua.
+  // Um lado por time (California, Content House); dentro dele, um quadro por regional, como antes.
   const teams = useMemo(() => {
     const names = [...new Set(data.tabs.map((t) => t.team))].sort((a, b) => teamOrder(a) - teamOrder(b));
     return names.map((team) => ({ team, tabs: data.tabs.filter((t) => t.team === team) }));
   }, [data.tabs]);
-  const teamOfTab = useMemo(() => new Map(data.tabs.map((t) => [t.title, t.team])), [data.tabs]);
+  const COLS = 2;
+  const rowsPerSide = Math.max(1, ...teams.map((t) => Math.ceil(t.tabs.length / COLS)));
 
   // Altura exata da área visível, para nada precisar de rolagem.
   const box = useRef<HTMLDivElement>(null);
@@ -76,23 +77,23 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
 
   /* ---------- Modo telão ---------- */
 
-  // Holofote: alterna entre os times, do mais pressionado ao mais tranquilo, pulando os vazios.
+  // Holofote: percorre os times do mais pressionado ao mais tranquilo, pulando os vazios.
   const stats = useMemo(() => {
     const m = new Map<string, { rows: number; clients: number; index: number; open: number }>();
-    teams.forEach(({ team }) => {
-      const rows = periodRows.filter((d) => d.team === team);
+    data.tabs.forEach((t) => {
+      const rows = periodRows.filter((d) => d.sourceTab === t.title);
       const pr = computePressure(rows, today);
-      m.set(team, { rows: rows.length, clients: new Set(rows.filter((d) => d.isOpen).map((d) => d.client)).size, index: pr.index, open: pr.open });
+      m.set(t.title, { rows: rows.length, clients: new Set(rows.filter((d) => d.isOpen).map((d) => d.client)).size, index: pr.index, open: pr.open });
     });
     return m;
-  }, [teams, periodRows, today]);
+  }, [data.tabs, periodRows, today]);
   const tour = useMemo(
     () =>
-      teams
-        .map((t) => t.team)
-        .filter((t) => (stats.get(t)?.rows ?? 0) > 0)
-        .sort((a, b) => stats.get(b)!.index - stats.get(a)!.index || stats.get(b)!.open - stats.get(a)!.open),
-    [teams, stats],
+      data.tabs
+        .filter((t) => (stats.get(t.title)?.rows ?? 0) > 0)
+        .sort((a, b) => stats.get(b.title)!.index - stats.get(a.title)!.index || stats.get(b.title)!.open - stats.get(a.title)!.open)
+        .map((t) => t.title),
+    [data.tabs, stats],
   );
   const tourKey = tour.join("|");
   const [spot, setSpot] = useState<string | null>(null);
@@ -160,56 +161,41 @@ export function PanoramaHorizontal({ data, filters, today, ctx, onDrill, onOpen,
         className="relative grid gap-3"
         style={{ height: height || undefined, gridTemplateColumns: `repeat(${teams.length}, minmax(0, 1fr))` }}
       >
-        {teams.map(({ team, tabs }, ti) => {
-          const rows = periodRows.filter((d) => d.team === team);
-          const base = scoped.filter((d) => d.team === team);
-          const regionals = tabs.map((t) => t.regional);
-          const sweepDelay = ((ti + 0.5) / teams.length) * SWEEP;
-          const counting = { cycle, delay: sweepDelay, on: motionOn };
-          const tab: TabInfo = { title: team, regional: "", team, rows: tabs.reduce((a, t) => a + t.rows, 0), headerRow: null, missingColumns: [] };
-          return (
-            <section key={team} aria-label={team} className="flex min-h-0 flex-col gap-3">
-              <TeamHeader team={team} regionals={regionals} index={ti} live={live} onOpen={() => onOpen(null, team)} />
-              <div className="grid min-h-0 flex-1">
-              <TeamTile
-                tab={tab}
-                rows={rows}
-                base={base}
-                today={today}
-                delay={ti * 0.15}
-                spotlight={live && spot === team}
-                dimmed={live && !!spot && spot !== team && tour.length > 1}
-                flash={Math.max(0, ...tabs.map((t) => flash[t.title] ?? 0))}
-                toasts={live ? toasts.filter((x) => teamOfTab.get(x.tab) === team) : []}
-                cycle={cycle}
-                sweepDelay={sweepDelay}
-                live={live}
-                motionOn={motionOn}
-                maxClients={12}
-                maxPeople={14}
-                ctx={ctx}
-                onDrill={onDrill}
-                onOpen={() => onOpen(null, team)}
-              />
-              </div>
-              <div className="grid shrink-0 gap-3" style={{ height: "clamp(120px, 17vh, 250px)", gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-                {tabs.map((t, ri) => (
-                  <RegionCard
-                    key={t.title}
-                    tab={t}
-                    rows={rows.filter((d) => d.sourceTab === t.title)}
-                    today={today}
-                    delay={ti * 0.15 + 0.3 + ri * 0.06}
-                    flash={flash[t.title] ?? 0}
-                    live={live}
-                    counting={counting}
-                    onOpen={() => onOpen(t.regional, t.team)}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
+        {teams.map(({ team, tabs }, si) => (
+          <section key={team} aria-label={team} className="flex min-h-0 flex-col gap-3">
+            <TeamHeader team={team} regionals={tabs.map((t) => t.regional)} index={si} live={live} onOpen={() => onOpen(null, team)} />
+            <div className="grid min-h-0 flex-1 gap-3" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rowsPerSide}, minmax(0, 1fr))` }}>
+              {tabs.map((t, ti) => {
+                const col = ti % COLS;
+                // Número ímpar de regionais: o último quadro ocupa a linha inteira.
+                const wide = ti === tabs.length - 1 && tabs.length % COLS === 1;
+                return (
+                  <div key={t.title} className="grid min-h-0" style={{ gridColumn: wide ? `span ${COLS}` : undefined }}>
+                    <TeamTile
+                      tab={t}
+                      heading="regional"
+                      rows={periodRows.filter((d) => d.sourceTab === t.title)}
+                      base={scoped.filter((d) => d.sourceTab === t.title)}
+                      today={today}
+                      delay={si * 0.15 + ti * 0.08}
+                      spotlight={live && spot === t.title}
+                      dimmed={live && !!spot && spot !== t.title && tour.length > 1}
+                      flash={flash[t.title] ?? 0}
+                      toasts={live ? toasts.filter((x) => x.tab === t.title) : []}
+                      cycle={cycle}
+                      sweepDelay={((si * COLS + (wide ? 0.5 : col) + 0.5) / (teams.length * COLS)) * SWEEP}
+                      live={live}
+                      motionOn={motionOn}
+                      ctx={ctx}
+                      onDrill={onDrill}
+                      onOpen={() => onOpen(t.regional, t.team)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
 
         {/* Faixa de luz do ciclo de leitura */}
         {motionOn && cycle > 0 && (
@@ -392,94 +378,6 @@ function TeamHeader({ team, regionals, index, live, onOpen }: { team: string; re
   );
 }
 
-/* ---------- Cartão da regional (dentro do lado de um time) ---------- */
-
-function RegionCard({
-  tab,
-  rows,
-  today,
-  delay,
-  flash,
-  live,
-  counting,
-  onOpen,
-}: {
-  tab: TabInfo;
-  rows: Demand[];
-  today: string;
-  delay: number;
-  flash: number;
-  live: boolean;
-  counting: Counting;
-  onOpen: () => void;
-}) {
-  const pr = useMemo(() => computePressure(rows, today), [rows, today]);
-  const flashing = useFlash(flash, live);
-  const status = useMemo(() => {
-    const m = new Map<StatusCategory, number>();
-    rows.forEach((d) => m.set(d.statusCategory, (m.get(d.statusCategory) ?? 0) + 1));
-    return STATUS_ORDER.filter((c) => m.get(c)).map((c) => ({ cat: c, n: m.get(c)! }));
-  }, [rows]);
-  const photo = REGIONAL_PLACES[tab.regional]?.photos?.[0];
-  return (
-    <motion.button
-      onClick={onOpen}
-      title={`Abrir dashboard de ${regionalName(tab.regional)} · ${tab.team}`}
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={`group relative flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-white/[0.07] bg-white/[0.025] text-left transition hover:border-white/20 ${flashing ? "ci-flash" : ""}`}
-      style={{ containerType: "size" }}
-    >
-      {photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={photo.src} alt="" aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[38%] w-full object-cover opacity-40" style={{ filter: "blur(10px) saturate(120%)", maskImage: "linear-gradient(#000, transparent)" }} />
-      )}
-      <div className="relative flex min-h-0 flex-1 flex-col justify-between" style={{ padding: "min(8cqh, 5cqw)", ["--r" as string]: "min(1cqh, 0.62cqw)" }}>
-        <div className="flex items-center justify-between">
-          <span className="display truncate leading-none text-paper" style={{ fontSize: "max(16px, calc(var(--r) * 14))" }}>
-            {regionalName(tab.regional)}
-          </span>
-          <ArrowUpRight className="shrink-0 text-paper-mute transition group-hover:text-paper" style={{ width: "max(14px, calc(var(--r) * 9))", height: "max(14px, calc(var(--r) * 9))" }} />
-        </div>
-        {rows.length ? (
-          <>
-            <div className="grid grid-cols-4">
-              <MiniMetric label="Abertas" value={pr.open} counting={counting} />
-              <MiniMetric label="Vencidas" value={pr.late} color={pr.late ? LATE : undefined} counting={counting} />
-              <MiniMetric label="Em 7 dias" value={pr.dueSoon} counting={counting} />
-              <MiniMetric label="Travadas" value={pr.blocked} color={pr.blocked ? "#d95926" : undefined} counting={counting} />
-            </div>
-            <div className="flex w-full overflow-hidden rounded-full bg-white/[0.06]" style={{ height: "max(4px, calc(var(--r) * 3.4))" }}>
-              {status.map((st) => (
-                <span key={st.cat} className={`h-full ${counting.on && FLOWING.has(st.cat) ? "ph-flow" : ""}`} style={{ width: `${(st.n / rows.length) * 100}%`, background: STATUS_COLORS[st.cat] }} title={`${CAT_LABEL[st.cat]}: ${st.n}`} />
-              ))}
-            </div>
-          </>
-        ) : (
-          <span className="text-paper-mute" style={{ fontSize: "max(11px, calc(var(--r) * 5))" }}>
-            {tab.rows === 0 ? "Pauta ainda sem registros" : "Nenhuma demanda no filtro atual"}
-          </span>
-        )}
-      </div>
-    </motion.button>
-  );
-}
-
-function MiniMetric({ label, value, color, counting }: { label: string; value: number; color?: string; counting: Counting }) {
-  const shown = useCountUp(value, counting);
-  return (
-    <span className="min-w-0">
-      <span className="display block tabular-nums leading-none" style={{ fontSize: "max(18px, calc(var(--r) * 19))", color: color ?? "#FFFBF0" }}>
-        {shown}
-      </span>
-      <span className="mt-[0.3em] block truncate text-paper-mute" style={{ fontSize: "max(10px, calc(var(--r) * 5.6))" }}>
-        {label}
-      </span>
-    </span>
-  );
-}
-
 /* ---------- Cartão do time ---------- */
 
 function TeamTile(p: {
@@ -488,6 +386,8 @@ function TeamTile(p: {
   base: Demand[];
   today: string;
   delay: number;
+  /** "regional": o lado já mostra a marca do time, então o quadro leva o nome da cidade. */
+  heading?: "team" | "regional";
   spotlight: boolean;
   dimmed: boolean;
   flash: number;
@@ -496,8 +396,6 @@ function TeamTile(p: {
   sweepDelay: number;
   live: boolean;
   motionOn: boolean;
-  maxClients?: number;
-  maxPeople?: number;
   ctx: ChartCtx;
   onDrill: (r: DrillRequest) => void;
   onOpen: () => void;
@@ -507,7 +405,7 @@ function TeamTile(p: {
   const open = useMemo(() => rows.filter((d) => d.isOpen), [rows]);
   const flashing = useFlash(p.flash, p.live);
   const logo = TEAM_LOGOS[teamKey(tab.team)];
-  const label = tab.regional ? `${regionalName(tab.regional)} · ${tab.team}` : `${tab.team} · todas as regionais`;
+  const label = `${regionalName(tab.regional)} · ${tab.team}`;
 
   const types = useMemo(() => {
     const m = new Map<string, number>();
@@ -569,13 +467,22 @@ function TeamTile(p: {
       style={{ containerType: "size" }}
       aria-label={label}
     >
-      <div className="ph-body min-h-0 flex-1" style={{ padding: "calc(var(--u) * 3.4)", rowGap: "calc(var(--u) * 2.6)" }}>
+      {p.heading === "regional" && REGIONAL_PLACES[tab.regional]?.photos?.[0] && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={REGIONAL_PLACES[tab.regional].photos[0].src}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[22%] w-full object-cover opacity-35"
+          style={{ filter: "blur(12px) saturate(120%)", maskImage: "linear-gradient(#000, transparent)" }}
+        />
+      )}
+      <div className="ph-body relative min-h-0 flex-1" style={{ padding: "calc(var(--u) * 3.4)", rowGap: "calc(var(--u) * 2.6)" }}>
         {/* Logo do time e atalho para a dashboard */}
         <div className="ph-head flex shrink-0 items-center justify-between">
-          {!tab.regional ? (
-            // Lado do time: a marca já está no cabeçalho acima, aqui fica só o recorte.
-            <span className="eyebrow" style={{ fontSize: "max(10px, calc(var(--u) * 2))" }}>
-              Todas as regionais
+          {p.heading === "regional" ? (
+            <span className="display truncate leading-none text-paper" style={{ fontSize: "calc(var(--u) * 6)" }}>
+              {regionalName(tab.regional)}
             </span>
           ) : logo ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -661,7 +568,7 @@ function TeamTile(p: {
               title="Clientes em Pauta"
               empty="Nenhum cliente com demanda aberta"
               items={clients}
-              max={p.maxClients ?? 8}
+              max={8}
               delay={p.delay}
               live={p.motionOn}
               hold={p.spotlight}
@@ -682,7 +589,7 @@ function TeamTile(p: {
               title="Colaboradores em Pauta"
               empty="Nenhuma demanda aberta com responsável"
               items={people}
-              max={p.maxPeople ?? 10}
+              max={10}
               delay={p.delay + 0.15}
               live={p.motionOn}
               hold={false}
