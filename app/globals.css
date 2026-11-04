@@ -192,3 +192,40 @@ body {
 }
 .ci-bulb { animation: ci-bulb 3.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .ci-bulb { animation: none; } }
+
+/* ---------- Modo telão (Panorama em apresentação) ---------- */
+/* Barras do Top 10 crescem a partir da esquerda quando o bloco entra em foco. */
+@keyframes ci-grow {
+  from { transform: scaleX(0); }
+}
+.ci-present .ci-bar {
+  transform-origin: left center;
+  animation: ci-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Letreiro do rodapé: o conteúdo é duplicado, então andar 50% fecha o ciclo sem emenda. */
+@keyframes ci-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ci-marquee {
+  animation: ci-marquee linear infinite;
+}
+.ci-marquee.is-paused {
+  animation-play-state: paused;
+}
+/* Pulso quando a planilha muda: o bloco do time pisca uma moldura vermelha. */
+@keyframes ci-flash {
+  0% { box-shadow: 0 0 0 0 rgba(231, 16, 61, 0.65); }
+  60% { box-shadow: 0 0 0 10px rgba(231, 16, 61, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 16, 61, 0); }
+}
+.ci-flash {
+  animation: ci-flash 1.1s ease-out 3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ci-present .ci-bar,
+  .ci-marquee,
+  .ci-flash {
+    animation: none;
+  }
+}

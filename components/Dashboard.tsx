@@ -162,14 +162,15 @@ export default function Dashboard() {
   }, [presenting]);
   const rotIdx = useRef(0);
   useEffect(() => {
-    if (!rotating) return;
+    // No Panorama em apresentação quem roda é o percurso do próprio Panorama.
+    if (!rotating || view === "panorama") return;
     const stops: (string | null)[] = [null, ...[...new Set(tabs.filter((t) => t.rows > 0).map((t) => t.regional))]];
     const id = setInterval(() => {
       rotIdx.current = (rotIdx.current + 1) % stops.length;
       setFilters((f) => ({ ...f, regional: stops[rotIdx.current], team: null }));
     }, 30_000);
     return () => clearInterval(id);
-  }, [rotating, tabs]);
+  }, [rotating, tabs, view]);
 
   if (!data) {
     return (
@@ -308,6 +309,7 @@ export default function Dashboard() {
               ctx={ctx}
               onDrill={setDrill}
               onOpen={(r, t) => navigate(r, t)}
+              presenting={presenting}
             />
           ) : (
             <>

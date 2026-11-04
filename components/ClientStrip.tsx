@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Maximize2, X } from "lucide-react";
 import { DemandItem, sortByUrgency } from "./charts/PersonDemands";
@@ -9,6 +9,7 @@ import { isLate } from "@/lib/analytics";
 import { ClientMark } from "./ClientMark";
 import { LATE } from "./theme";
 import { useFitGrid } from "./useFitGrid";
+import { runSequence, usePresent } from "./present";
 import { CountBadge, LateBadge } from "./charts/operation";
 import type { Demand } from "@/lib/types";
 
@@ -34,6 +35,19 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
   const titleId = useId();
   const fit = useFitGrid(clients.length, { minItem: 96, gap: 8, maxCircle: 104 });
   const [picked, setPicked] = useState<string | null>(null);
+  // Modo telão: holofote automático nos três mais carregados, abrindo as demandas de cada um por alguns segundos.
+  const present = usePresent();
+  const spotlight = present.on && !present.paused && present.phase === "top";
+  const spotNames = clients.slice(0, 3).map((c) => c.name).join("|");
+  useEffect(() => {
+    if (!spotlight || !spotNames) return;
+    const names = spotNames.split("|");
+    return runSequence(names.length, { delay: 4500, every: 3800 }, (i) => setPicked(names[i]), () => setPicked(null));
+  }, [spotlight, spotNames]);
+  // Quando o percurso sai deste trecho, fecha o que o holofote abriu (pausar não fecha nada).
+  useEffect(() => {
+    if (present.on && present.phase !== "top") setPicked(null);
+  }, [present.on, present.phase]);
   const current = picked && clients.some((c) => c.name === picked) ? picked : null;
   const list = current ? sortByUrgency(rows.filter((d) => d.client === current && d.isOpen)) : [];
   const late = list.filter((d) => isLate(d, today)).length;
@@ -51,10 +65,10 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
       {clients.length > 0 && (
         <div ref={fit.ref} className="px-4 pb-4 pt-3">
         <ul className="grid gap-y-3" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))`, columnGap: fit.gap }}>
-          {clients.map((c) => {
+          {clients.map((c, i) => {
             const sel = c.name === current;
             return (
-              <li key={c.name}>
+              <motion.li key={c.name} initial={present.on ? { opacity: 0, scale: 0.6, y: 12 } : false} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ delay: present.on ? Math.min(i * 0.05, 1.2) : 0, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
                 <button
                   onClick={() => setPicked(sel ? null : c.name)}
                   aria-pressed={sel}
@@ -73,7 +87,7 @@ export function ClientStrip({ rows, today, onDrill }: { rows: Demand[]; today: s
                   </span>
                   <span className={`mt-2 block w-full truncate text-center text-[11.5px] ${sel ? "font-semibold text-paper" : "text-paper-dim group-hover:text-paper"}`}>{c.name}</span>
                 </button>
-              </li>
+              </motion.li>
             );
           })}
         </ul>

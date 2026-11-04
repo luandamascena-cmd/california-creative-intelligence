@@ -282,7 +282,7 @@ export function TopClients({ rows, ctx, className }: ChartProps) {
                     <span className="min-w-0">
                       <span className="block truncate text-[12.5px] text-paper-dim">{d.name}</span>
                       <span className="mt-1 block h-1 rounded-full bg-white/[0.08]">
-                        <span className="block h-1 rounded-full bg-paper-dim transition-all duration-700" style={{ width: `${(d.value / max) * 100}%` }} />
+                        <span className="ci-bar block h-1 rounded-full bg-paper-dim transition-all duration-700" style={{ width: `${(d.value / max) * 100}%`, animationDelay: `${i * 70}ms` }} />
                       </span>
                     </span>
                     <span className="text-right text-[12.5px] tabular-nums text-paper">

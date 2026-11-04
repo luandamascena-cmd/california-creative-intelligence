@@ -6,6 +6,7 @@ import { Briefcase, ChevronLeft, ChevronRight, Layers, Lightbulb, Shapes, Sparkl
 import { countBy, fmtPct } from "@/lib/analytics";
 import { addDaysISO } from "@/lib/text";
 import type { Demand } from "@/lib/types";
+import { usePresent } from "./present";
 
 interface Item {
   k: string;
@@ -115,6 +116,15 @@ export function Insights({ rows, today, compact, trendRows, rotate }: { rows: De
   useEffect(() => setIdx(0), [items.length]);
   const cur = items[Math.min(idx, items.length - 1)];
   const step = (n: number) => setIdx((i) => (i + n + items.length) % items.length);
+  // Modo telão: as frases passam sozinhas, com uma barra mostrando quando vem a próxima.
+  const present = usePresent();
+  const auto = !!rotate && present.on && !present.paused && items.length > 1;
+  const AUTO_MS = 7000;
+  useEffect(() => {
+    if (!auto) return;
+    const id = window.setTimeout(() => setIdx((i) => (i + 1) % items.length), AUTO_MS);
+    return () => window.clearTimeout(id);
+  }, [auto, idx, items.length]);
 
   return (
     <section aria-labelledby={titleId} className="card relative flex h-full flex-col overflow-hidden p-0">
@@ -143,6 +153,11 @@ export function Insights({ rows, today, compact, trendRows, rotate }: { rows: De
           <span className="ml-auto hidden text-[11px] text-paper-faint 2xl:block">Leituras automáticas do recorte</span>
         )}
       </header>
+      {auto && (
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-[2px] bg-white/[0.06]">
+          <motion.span key={idx} className="block h-full bg-[#F5C451]/70" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: AUTO_MS / 1000, ease: "linear" }} />
+        </span>
+      )}
       {items.length && rotate && cur ? (
         <div className="relative flex flex-1 items-center overflow-hidden" aria-live="polite">
           <AnimatePresence mode="wait" initial={false}>
