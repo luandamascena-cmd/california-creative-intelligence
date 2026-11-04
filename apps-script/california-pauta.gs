@@ -50,6 +50,11 @@ function doGet(e) {
     return ciJson_({ ok: false, error: 'token inválido' });
   }
 
+  // Layout compartilhado da dashboard (hospedagens sem disco permanente guardam aqui).
+  if (e.parameter.action === 'layout') {
+    return ciJson_({ ok: true, layout: PropertiesService.getScriptProperties().getProperty('LAYOUT') });
+  }
+
   var cache = CacheService.getScriptCache();
   var guardado = cache.get('ci-pauta');
   if (guardado) return ContentService.createTextOutput(guardado).setMimeType(ContentService.MimeType.JSON);
@@ -115,6 +120,38 @@ function testarFotos() {
   var lista = ciPessoas_();
   console.log(lista.length + ' pessoas com foto');
   lista.slice(0, 5).forEach(function (p) { console.log(p.name + ' <' + p.email + '>'); });
+}
+
+/** Salva o layout compartilhado enviado pela dashboard (somente com o token da API). */
+function doPost(e) {
+  var esperado = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
+  var corpo = {};
+  try { corpo = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) {}
+  if (!esperado || esperado.length < 32 || !ciIguais_(corpo.token || '', esperado)) {
+    return ciJson_({ ok: false, error: 'token inválido' });
+  }
+  if (corpo.action === 'saveLayout' && typeof corpo.layout === 'string' && corpo.layout.length < 9000) {
+    PropertiesService.getScriptProperties().setProperty('LAYOUT', corpo.layout);
+    return ciJson_({ ok: true });
+  }
+  return ciJson_({ ok: false, error: 'pedido inválido' });
+}
+
+/**
+ * Mantém a dashboard acordada em hospedagens gratuitas que dormem sem acesso (Render).
+ * Rode ativarDespertador() uma vez: cria um acionador que visita a dashboard a cada 10 minutos.
+ */
+function manterAcordado() {
+  var url = PropertiesService.getScriptProperties().getProperty('DASHBOARD_URL');
+  if (url) UrlFetchApp.fetch(url + '/api/health', { muteHttpExceptions: true });
+}
+
+function ativarDespertador() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'manterAcordado') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('manterAcordado').timeBased().everyMinutes(10).create();
+  manterAcordado();
 }
 
 /* ---------- 3. Aviso de edição ---------- */

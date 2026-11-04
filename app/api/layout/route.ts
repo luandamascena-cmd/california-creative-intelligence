@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { SESSION_COOKIE, sessionRole } from "@/lib/session";
 import { DEFAULT_LAYOUT, sanitizeLayout, type SharedLayout } from "@/lib/layout";
+import { layoutStoreMode, readLayoutRaw, writeLayoutRaw } from "@/lib/layout-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** Arquivo do layout compartilhado. No Railway fica no volume montado em /data, que sobrevive a novos deploys. */
-function layoutFile() {
-  return process.env.LAYOUT_FILE || path.join(process.cwd(), ".data", "layout.json");
-}
 
 /**
  * Ajustes pedidos depois que o layout já tinha sido salvo. Cada um roda uma única vez sobre o arquivo
@@ -34,21 +28,19 @@ const MIGRATIONS: { id: string; apply: (l: SharedLayout) => SharedLayout }[] = [
 ];
 
 async function writeLayout(layout: SharedLayout) {
-  const file = layoutFile();
-  await fs.mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(layout, null, 2));
-  await fs.rename(tmp, file);
+  await writeLayoutRaw(JSON.stringify(layout, null, 2));
 }
 
 async function readLayout(): Promise<SharedLayout> {
-  let raw: string;
+  const raw = await readLayoutRaw();
+  if (!raw) return DEFAULT_LAYOUT;
+  let parsed: unknown;
   try {
-    raw = await fs.readFile(layoutFile(), "utf8");
+    parsed = JSON.parse(raw);
   } catch {
     return DEFAULT_LAYOUT;
   }
-  let layout = sanitizeLayout(JSON.parse(raw));
+  let layout = sanitizeLayout(parsed);
   const pending = MIGRATIONS.filter((m) => !layout.migrations?.includes(m.id));
   if (pending.length) {
     pending.forEach((m) => (layout = m.apply(layout)));
@@ -78,6 +70,6 @@ export async function PUT(req: NextRequest) {
     console.error("[layout] falha ao salvar", e);
     return NextResponse.json({ ok: false, error: "Não foi possível salvar o layout no servidor." }, { status: 500 });
   }
-  console.log(`[layout] salvo: ${layout.dashboard.length} gráficos na dashboard, ${layout.panorama.length} no Panorama`);
+  console.log(`[layout] salvo (${layoutStoreMode()}): ${layout.dashboard.length} gráficos na dashboard, ${layout.panorama.length} no Panorama`);
   return NextResponse.json({ ok: true, layout });
 }
